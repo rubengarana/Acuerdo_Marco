@@ -1,0 +1,27 @@
+---
+title: "Estudio de Oferta Papel Bond T-C"
+author: "Dirección Especifica de Acuerdos Marco"
+date: "`r sys.Date()`"
+output: 
+  word_document:
+    fig_caption: yes
+    toc: yes
+---
+
+# Breve memoria técnica de elaboración del estudio.
+
+# Tablas de resumen de información.
+
+## Caracteristicas generales de los proveedores.
+
+## Participación de mercado público de los principales proveedores.
+
+## Precios ajustados de los proveedores.
+
+## 
+
+# Análisis de la tabal de resumen de información.
+
+# Concluciones.
+
+# Acciones a seguir.

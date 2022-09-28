@@ -1,0 +1,459 @@
+---
+title: "Estudio de Viabilidad"
+author: "Dirección Especifica de Acuerdos Marco"
+date: "`r Sys.Date()`"
+output: 
+  word_document:
+    fig_caption: yes
+    highlight: tango
+    reference_docx: E:/Respaldo Ruben/Acuerdo Marcos/Formato Estudio Previo/Estudio Previo.docx
+    toc: yes
+---
+
+# 1.1 Tabla de Criterios de Viabilidad
+
+## ESTUDIO DE VIABILIDAD
+
+| 1\. Datos Generales: |
+|:--------------------:|
+
+|                                                                                 |
+|---------------------------------------------------------------------------------|
+| 1.1 Fecha de Estudio: 03/08/2022                                                |
+| 1.2 Unidad/Entidad que realiza el estudio: Departamento Estudio de Mercado      |
+| 1.3 Responsable del Estudio:                                                    |
+| 1.4 Nombre del Producto: Papel Bond                                             |
+| 1.5 Descripcion del producto: tamaño carta y legal                              |
+| 1.6 Clasificación del producto según el catálogo de la DGCE: 4412               |
+| 1.7 Nombre de la categoría: Productos de Papel                                  |
+
+| 2\. Requisitos minimos para aplicar AM |
+|:--------------------------------------:|
+
++----------------------------------------------------------+-----------+-----------+
+| Criterios                                                | Sí        | No        |
++:=========================================================+:=========:+:=========:+
+| 2.1 El producto es un bien o servicio                    |    [X]    |           |
++----------------------------------------------------------+-----------+-----------+
+| 2.2 El producto se requiere en varias entidades públicas |    [X]    |           |
++----------------------------------------------------------+-----------+-----------+
+| 2.3 El producto se consume frecuentemente                |    [X]    |           |
++----------------------------------------------------------+-----------+-----------+
+| 2.4 El producto es estandarizable                        |    [X]    |           |
++----------------------------------------------------------+-----------+-----------+
+
+| 3\. Datos informativos del producto |
+|:-----------------------------------:|
+
++-----------------------------------------------------+-------------+-------------+
+| Criterios                                           | Sí          | No          |
++:====================================================+:===========:+:===========:+
+| 3.1 El producto está estandarizado                  |     [X]     |             |
++-----------------------------------------------------+-------------+-------------+
+| 3.2 El producto tiene sustitutos conocidos          |             |    [X]      |
++-----------------------------------------------------+-------------+-------------+
+| 3.3 El precio del producto es muy variable          |             |    [X]      |
++-----------------------------------------------------+-------------+-------------+
+| 3.4 La demanda del producto es estable y predecible |             |    [X]      |
++-----------------------------------------------------+-------------+-------------+
+
+# 1.2 Analisis de la Tabla de criterios de Viabilidad
+
+## Extración de Datos.
+
+```{r Extracion de Datos, echo=FALSE, message=FALSE, warning=FALSE}
+#Primer paso: Cargar base de datos de Familia 4412 y 1411
+
+library(readxl)
+library(lubridate)
+library(tidyverse)
+library(car)
+library(nortest)
+
+B_1 <- read_xlsx("C:/Users/rubena/Desktop/Acuerdos Marco/reporte de OC yandra.xlsx",sheet = "4412")
+B_1 <- B_1[,-20]
+B_2 <- read_xlsx("C:/Users/rubena/Desktop/Acuerdos Marco/informacion Familia 4412 1411 2020.xlsx",sheet = "4412")
+B_3 <- read_xlsx("C:/Users/rubena/Desktop/Acuerdos Marco/informacion Familia 4412 1411 2020.xlsx",sheet = "1411")
+Base <- rbind(B_1,B_2,B_3)
+remove(list = c("B_1","B_2","B_3"))
+Base <- Base[,-c(14,20)]
+Base <- unique(Base)
+Base <- Base %>% rename_with(~gsub(".","_",.x,fixed=TRUE)) %>%
+  rename_with(~gsub(" ","_",.x,fixed=TRUE))
+
+#Segundo paso: Extraer datos de tasa de cambio, IPC y Importaciones.
+
+source("C:/Users/rubena/Desktop/Acuerdos Marco/Acuerdo Marco/Factores de Ajuste/Factores_Ajustes.R")
+
+TasaCambio <- Tasa_Cambio()
+Inidice_PC <- IPC()
+Importacion <- I_Importaciones()
+
+```
+
+Se inicia cargando las distintas bases de datos en archivo excel que contienen la información de los productos en la familia 4412 y 1411, seguido se unifican la información y se extraen registros unicos de la unión de la bases de datos. también se procede a extraer información del Banco Central de Nicaragua como la [Tasa de Cambio](https://www.bcn.gob.ni/IRR/tipo_cambio_mensual) y [Indices de importaciones](https://www.bcn.gob.ni/sites/default/files/estadisticas/sector_externo/comercio_exterior/indices_comercio/6-26.htm), asi como [Indice de Precios del Consumidor](https://www.inide.gob.ni/Home/ipc) del INIDE.
+
+## Preparación de los Datos.
+
+```{r Eleminacion de datos faltantes, message=FALSE, warning=FALSE}
+
+apply(is.na(Base),2,sum)
+
+```
+
+Se inicia primeramente eleminando los registros sin precio unitario, cantidad y Especificaion Tecnica.
+
+```{r}
+Base <- Base[!(is.na(Base$PRECIO_UNITARIO)|is.na(Base$CANTIDAD)|is.na(Base$ESPECIFICACION_TECNICA)),]
+apply(is.na(Base),2,sum)
+```
+
+Se verifica si algun campo contiene un caracter vacio.
+
+```{r}
+apply(sapply(Base,FUN = function(x){x==""}),2,FUN = sum)
+```
+
+
+```{r Procesamiento de Datos, echo=FALSE, message=FALSE, warning=FALSE}
+#Buscamos el producto Papel Bond.
+
+Base_P <- Base %>% mutate(ESPECIFICACION_TECNICA=str_to_upper(Base$ESPECIFICACION_TECNICA)) %>% filter(str_detect(ESPECIFICACION_TECNICA,"PAPEL") & str_detect(ESPECIFICACION_TECNICA,"BOND")) %>%
+  mutate(DIMENSION_PAPEL=str_extract(ESPECIFICACION_TECNICA,"([1-9][1-9]*[:punct:]*[:space:]*[1-9]*[:punct:]*[1-9]*[:punct:]*[:space:]*(X)*[:symbol:]*[:space:]*[1-9][1-9][:punct:]*)|(CARTA)|(LEGAL)|(T[:punct:]*[CL])|(A4)")) %>% relocate(DIMENSION_PAPEL,.after=ESPECIFICACION_TECNICA) %>%
+  replace_na(list(DIMENSION_PAPEL="INDETERMINADO"))
+
+```
+
+
+se procede con el procesamiento de la base de datos, extrayendose del campo Especificación Tecnica el producto Papel Bond. se agrega una columna adicional que detalla las Dimensiones del papel, en los registros que no se logra determinar el área del papel se categoriza como indeterminado.
+
+
+```{r Trasladar el precio a futuro, echo=FALSE, message=FALSE, warning=FALSE}
+Base_P$FECHA_PUBLIC_OC <- dmy(Base_P$FECHA_PUBLIC_OC)
+Base_P <- Base_P %>% mutate("MES"=str_to_title(month(FECHA_PUBLIC_OC,label=TRUE,abbr=FALSE))) %>% unite("YEAR-MES",`AÑO`,MES,sep="-") %>% left_join(TasaCambio,by=c("FECHA_PUBLIC_OC"="Fecha")) %>%
+  left_join(Inidice_PC,by=c("YEAR-MES"="year-mes")) %>%
+  left_join(Importacion,by=c("YEAR-MES"="year-mes")) %>%
+  mutate(PRECIO_AJUSTADO = if_else(MONEDA_OC=="Dólar",PRECIO_UNITARIO*Tasa,PRECIO_UNITARIO)) %>% mutate(PRECIO_AJUSTADO=PRECIO_AJUSTADO*Crecimiento*Indice_C) %>% relocate(PRECIO_AJUSTADO,.after=PRECIO_UNITARIO) %>%
+  select(!c(Tasa:last_col()))
+
+```
+
+
+Posteriormente, se actualiza a tiempo presente el precio unitario, en la que se utiliza la tasa de cambio para convertir los precios que esta en dólares en córdobas, se usa el factor de crecimiento del indice de importaciones especificamente de la categoria madera, papel y conexos y el también el Indice de Precios del Consumidor para ajustar los precios conforme la inflación.
+
+
+```{r Verificacion de Dimensiones Papel, message=FALSE, warning=FALSE}
+
+unique(Base_P$DIMENSION_PAPEL)
+
+```
+
+
+En la Base de datos se presentan `r length(unique(Base_P$DIMENSION_PAPEL))` áreas de papel, entre las que se repiten de muchas formas el papel bond tamaño carta y legal, las que se proceden a hologar como una sola expresión.
+
+
+```{r Homologacion de Dimension, echo=FALSE, message=FALSE, warning=FALSE}
+options(scipen = 999)
+Base_P <- Base_P %>% mutate(DIMENSION_PAPEL=if_else(str_detect(DIMENSION_PAPEL,"(CARTA)|(11)|(T/C)|(C)"),"CARTA 8.5 X 11",DIMENSION_PAPEL)) %>%
+  mutate(DIMENSION_PAPEL=if_else(str_detect(DIMENSION_PAPEL,"(LEGAL)|(T/L)|(L)|(14)"),"LEGAL 8.5 X 14",DIMENSION_PAPEL)) %>% mutate(DIMENSION_PAPEL=if_else(str_detect(DIMENSION_PAPEL,"34"),"22 X 34",DIMENSION_PAPEL))
+
+P <- Base_P %>% group_by(DIMENSION_PAPEL) %>% summarise(Frecuencia=n(),Monto_Total=sum(PRECIO_UNITARIO*CANTIDAD,na.rm=TRUE)) %>%
+  arrange(desc(Monto_Total))
+P$Monto_Total <- round(P$Monto_Total,2)
+knitr::kable(P,align = c("l","r","r"),format.args = list(big.mark=",",nsmall=2),caption = "Tabla Frecuencia Dimensión Papel")
+options(scipen = 0)
+```
+
+En la tabla de frecuencia de las dimensiones de Papel bond, se aprecia que los productos con mayor frecuencia son CARTA 8.5 X 11, LEGAL 8.5 X 14 y la categorización Indeterminado; cabe destacar que la mayoria del gasto público por compra se ubico en estas tres Dimensiones del Papel, la que se calcula con las cantidades de cada unidad de medida por su precio unitario. Por lo tanto se procede a excluir las otras dimensiones de la base de datos del papel bond.
+
+```{r Exclusión,echo=FALSE}
+Base_P <- filter(Base_P,DIMENSION_PAPEL %in% c("CARTA 8.5 X 11","LEGAL 8.5 X 14","INDETERMINADO"))
+
+```
+
+```{r Unidad de Medida, echo=FALSE, fig.width=10}
+
+P <- Base_P %>% group_by(UNIDAD_DE_MEDIDA) %>% summarise(Frecuencia=n(),Minimo=round(quantile(PRECIO_AJUSTADO,na.rm=TRUE,names=FALSE)[1],2),P_cuartil=round(quantile(PRECIO_AJUSTADO,na.rm=TRUE,names=FALSE)[2],2),Media=round(quantile(PRECIO_AJUSTADO,na.rm=TRUE,names=FALSE)[3],2),C_Cuartil=round(quantile(PRECIO_AJUSTADO,na.rm=TRUE,names=FALSE)[4],2),Maximo=round(quantile(PRECIO_AJUSTADO,na.rm=TRUE,names=FALSE)[5],2),Costo_Total = round(sum(CANTIDAD*PRECIO_AJUSTADO,na.rm=TRUE),2)) %>%
+  arrange(desc(Costo_Total))
+
+knitr::kable(P,align = c("l","r","r","r","r","r","r","r"),format.args = list(big.mark=","),caption = "Tabla Frecuencia Unidad de Medida")
+
+```
+
+
+En la tabla se visualiza que el papel bond tamaño carta y legal presentan una mayor demanda en presentación de resmas. tambien se observa una inadecuada clasificación del la unidad de medida por las instituciones públicas, debido a que se puede observar precios atipicos los cuales pueden corresponder a otras unidades de medidas. por lo cual se procede a excluir unidades de medidas poco frecuentadas, se observará los precios atipicos de las unidad de medida mas frecuentada para su exclusion y se homologara la unidad de medida en Resmas.
+
+```{r, echo=FALSE}
+Base_P$UNIDAD_DE_MEDIDA <- str_replace(Base_P$UNIDAD_DE_MEDIDA,"(Productos)|(Und)|(Resma \\(500 hojas\\))","Resma")
+Base_P <- Base_P %>% filter(UNIDAD_DE_MEDIDA=="Resma")
+P <- Base_P %>% group_by(UNIDAD_DE_MEDIDA) %>% summarise(Frecuencia=n(),Minimo=round(quantile(PRECIO_AJUSTADO,na.rm=TRUE,names=FALSE)[1],2),P_cuartil=round(quantile(PRECIO_AJUSTADO,na.rm=TRUE,names=FALSE)[2],2),Media=round(quantile(PRECIO_AJUSTADO,na.rm=TRUE,names=FALSE)[3],2),C_Cuartil=round(quantile(PRECIO_AJUSTADO,na.rm=TRUE,names=FALSE)[4],2),Maximo=round(quantile(PRECIO_AJUSTADO,na.rm=TRUE,names=FALSE)[5],2),Costo_Total = round(sum(CANTIDAD*PRECIO_AJUSTADO,na.rm=TRUE),2)) %>%
+  arrange(desc(Costo_Total))
+
+knitr::kable(P,align = c("l","r","r","r","r","r","r","r"),format.args = list(big.mark=","),caption = "Tabla Frecuencia Unidad de Medida")
+
+```
+
+se procede ahora ver los precios en los departamentos para verificar la diferencia monetarias por zona.
+
+```{r, echo=FALSE}
+P <- Base_P %>% group_by(DEPARTAMENTO_PROVEEDOR) %>% summarise(Frecuencia=n(),Minimo=round(quantile(PRECIO_AJUSTADO,na.rm=TRUE,names=FALSE)[1],2),P_cuartil=round(quantile(PRECIO_AJUSTADO,na.rm=TRUE,names=FALSE)[2],2),Media=round(quantile(PRECIO_AJUSTADO,na.rm=TRUE,names=FALSE)[3],2),C_Cuartil=round(quantile(PRECIO_AJUSTADO,na.rm=TRUE,names=FALSE)[4],2),Maximo=round(quantile(PRECIO_AJUSTADO,na.rm=TRUE,names=FALSE)[5],2),Costo_Total = round(sum(CANTIDAD*PRECIO_AJUSTADO,na.rm=TRUE),2)) %>%
+  arrange(desc(Costo_Total))
+
+knitr::kable(P,align = c("l","r","r","r","r","r","r","r"),format.args = list(big.mark=","),caption = "Tabla Frecuencia Departamento")
+```
+
+Conforme tabla se observa que aún existe valores atipicos de precios unitarios en las distintas zonas geografica, producto de una inadecuada clasificación, aunque se determino por unidad de medida de resma, en el campo de especificación tecnica algunas entidades indicarón cajas de papel bond las que se clasificarón como resma, asi como papel bond de colores conformado de 100 unidades. se procede a excluir de la base de datos atipicos maximos y minimos para producto de papel bond en resmas de papel tamaño carta y legal.
+
+
+```{r, echo=FALSE, fig.height=5}
+Base_P <- Base_P %>% filter(!str_detect(ESPECIFICACION_TECNICA,"COLOR")) %>% filter(PRECIO_AJUSTADO>80 & PRECIO_AJUSTADO < 500)
+P <- Base_P %>% group_by(DEPARTAMENTO_PROVEEDOR) %>% summarise(Frecuencia=n(),Minimo=round(quantile(PRECIO_AJUSTADO,na.rm=TRUE,names=FALSE)[1],2),P_cuartil=round(quantile(PRECIO_AJUSTADO,na.rm=TRUE,names=FALSE)[2],2),Media=round(quantile(PRECIO_AJUSTADO,na.rm=TRUE,names=FALSE)[3],2),C_Cuartil=round(quantile(PRECIO_AJUSTADO,na.rm=TRUE,names=FALSE)[4],2),Maximo=round(quantile(PRECIO_AJUSTADO,na.rm=TRUE,names=FALSE)[5],2),Costo_Total = round(sum(CANTIDAD*PRECIO_AJUSTADO,na.rm=TRUE),2)) %>%
+  arrange(desc(Costo_Total))
+
+knitr::kable(P,align = c("l","r","r","r","r","r","r","r"),format.args = list(big.mark=","),caption = "Tabla Frecuencia Departamento")
+
+```
+
+
+Concluido el procesamiento de la base de datos se procede a factorizar o categorizar los campos de la base de datos para determinar valores unicos.
+
+```{r, echo=FALSE}
+print("Tipo de Procedimientos:")
+print(unique(Base_P$TIPO_PROCEDIMIENTO))
+print("Tipo de Proveedor:")
+print(unique(Base_P$TIPO_PROVEEDOR))
+```
+
+*En el campo Tipo de procedimientos, se procede a categorizar como uno solo los que estan escritos en distintas formas.
+
+```{r, echo=FALSE}
+sort(unique(Base_P$PROVEEDOR))
+```
+*En le campo proveedor no se presentarón el mismo proveedor con caracteres que lo distingan y lo determinen en dos proveedores distintos.
+
+```{r, echo=FALSE}
+sort(unique(Base_P$INSTITUCION))
+```
+*En el campo Institución no se presentarón instituciones con caracteres que lo clasifiquen en entidades distintas.
+
+```{r, echo=FALSE}
+Base_P <- Base_P %>% mutate(INSTITUCION=str_trim(INSTITUCION,side="both")) %>% mutate(INSTITUCION=str_to_upper(INSTITUCION)) %>% mutate(PROVEEDOR=str_trim(PROVEEDOR,side="both")) %>% mutate(PROVEEDOR=str_to_upper(PROVEEDOR)) %>% mutate(TIPO_PROCEDIMIENTO=str_to_upper(TIPO_PROCEDIMIENTO)) %>% mutate(TIPO_PROCEDIMIENTO=if_else(str_detect(TIPO_PROCEDIMIENTO,"MENOR"),"CONTRATACION MENOR",TIPO_PROCEDIMIENTO))
+```
+
+## Requisitos Minimos
+
+### Bien ó Servicio
+
+El producto Papel Bond es un bien tangible, el cual conforme base de datos se extrajo el campo especificación tecnica o funcional dimension de papel, el cual es una variable categorica nominal con tres resultados: tamaño carta, legal y indeterminado (el cual no se logro clasificar el área del papel on no esta especificado). A este respecto se pretende determinar si el producto papel bond presenta aproximadamente el mismo precio medio en los tres resultados de las especificación tecnica. si el resultado que presenta es aproximadamente el mismo precio medio se le puede considera como un solo producto para los proximos estudios, en caso contrario son productos distintos.
+
+Para cumplir el objetivo propuesto se procede a cumplir los siguientes pasos:
+
+1. Independencia: Los datos en cada resultado de la variable dimension de papel son indepedientes uno de otros pues son elección de la entidad compradora en base a su requerimiento, se muestra el numero total de frecuencias en cada resultado
+
+```{r, echo=FALSE}
+P <- Base_P %>% group_by(DIMENSION_PAPEL) %>% summarise(Frecuencia=n())
+
+knitr::kable(P,caption = "Frecuencia por Dimensión de Papel")
+```
+
+2. Normalidad: en esta parte se procede a ver graficamente la distribución de los datos en histograma y en grafico de cuantiles, de igula forma se aplicara las pruebas estadisticas de shapiro test y de lilieforst test, que estan en dependencia del numero de observaciones en cada retultado de la categoria, si es menor o igual a 50, corresponde test de shapiro.
+
+#### Histogramas.
+
+```{r, echo=FALSE, fig.height=8, fig.width=18,dpi=200}
+Base_P %>% ggplot(aes(x=PRECIO_AJUSTADO)) + geom_histogram(aes(fill=..count..,y=..density..),bins = 25) + facet_grid(.~DIMENSION_PAPEL)  + geom_density(color="green",size=1) + stat_function(fun = dnorm,args = list(mean=mean(Base_P$PRECIO_AJUSTADO),sd=sd(Base_P$PRECIO_AJUSTADO)),color="red",size=1)+ ggtitle("Histogramas de Frecuencia.") + xlab("Precio Ajustado") + theme(axis.text = element_text(colour = "black",size = 25),axis.title = element_text(size = 30),title = element_text(size = 40),legend.title = element_text(size = 25),strip.text = element_text(size = 25),legend.text = element_text(size = 20)) 
+```
+
+Los Histogramas permiten ver que los precios ajustados no presentan una distribución normal, ellos estan más desviados a la deracha.
+
+#### Graficos de cuartiles.
+
+
+```{r, echo=FALSE, fig.height=8, fig.width=18}
+Base_P %>% ggplot(aes(sample=PRECIO_AJUSTADO)) + geom_qq() + geom_qq_line() + facet_grid(.~DIMENSION_PAPEL) + ggtitle("Graficos de Quantiles") + xlab("Quantiles") + ylab("Precios Ajustados") + theme(axis.text = element_text(colour = "black",size = 25),axis.title = element_text(size = 30),title = element_text(size = 40),strip.text = element_text(size = 25))
+```
+
+Los graficos de quantiles nos muestran visualmente que los datos no estan distribuidos normamente, exepto el resultado inderterminado. no obstante se procede a realizar las pruebas o test de normalidad.
+
+#### Test de Normalidad.
+
+```{r, echo=FALSE}
+options(scipen = 0)
+P <- rbind(data.frame(sapply(split(Base_P$PRECIO_AJUSTADO,Base_P$DIMENSION_PAPEL),FUN = function(x) {ifelse(length(x)<=50,shapiro.test(x)$p.value,lillie.test(x)$p.value)},simplify = FALSE),row.names = "P.value"),data.frame(sapply(split(Base_P$PRECIO_AJUSTADO,Base_P$DIMENSION_PAPEL),FUN = function(x) {ifelse(length(x)<=50,shapiro.test(x)$method,lillie.test(x)$method)},simplify = FALSE),row.names = "Metodo"))
+knitr::kable(P,align = c("r","r","r"),caption = "Prueba de distribución normal P.value")
+```
+
+Conforme el numero de elementos en cada categoria de la variable dimencion de papel, se procedio a calcular el p.value, el cual indica si los datos proceden de un distribucion normal, al respecto y conforme graficas antes consideradas solo la categoria Indeterminado presenta un distribucion normal de los datos, debido a que el p-vale es mayor a 0.05. 
+
+3. Homostecidad: se procede a determinar si la varianza de los precios ajustados en los tres resultados de la variable dimension de papel, presentan una varianza igual, para ello se hará uso de graficos de cajas y el test de levene con medida de tendencia central mediana, en vista que no todos los datos presentarón una distribución normal.
+
+#### Medidas de Tendencia Central.
+
+```{r, echo=FALSE}
+P <- Base_P %>% group_by(DIMENSION_PAPEL) %>% summarise(Varianza=var(PRECIO_AJUSTADO),Desviacion_Estandar=sd(PRECIO_AJUSTADO),Media=mean(PRECIO_AJUSTADO),Mediana=median(PRECIO_AJUSTADO))
+knitr::kable(P)
+```
+
+En la tabla se puede observar que la varianza del papel bond Legal es casi aproximada a la varianza de el resultado indeterminado, en contraste con las media y mediana que son mas proximas al tamaño Carta, es posible que tanto el papel tamaño carta y legal esten en el resultado indeterminado.
+
+#### Graficos de Cajas.
+
+```{r, echo=FALSE, fig.height=5, fig.width=15, message=FALSE, warning=FALSE,dpi=200}
+Base_P %>% ggplot(aes(x=DIMENSION_PAPEL,y=PRECIO_AJUSTADO,fill=DIMENSION_PAPEL,group=DIMENSION_PAPEL)) + geom_boxplot(notch = TRUE,outlier.shape = 18,outlier.colour = "orange",outlier.size = 4) + geom_jitter(alpha=0.3, color="black") + stat_summary(fun = mean,geom = "point",colour="red",size=3) + ggtitle("BoxPlot") + xlab("Dimenciones del Papel") + ylab("Precio Ajustado") + theme(axis.text = element_text(colour = "black",size = 25),axis.title = element_text(size = 30),title = element_text(size = 40),strip.text = element_text(size = 25),legend.position = "none")
+```
+
+
+Los boxplot muestran valores atipicos en color naranja, esto puede ser debido a que los datos estan más concentrados en a la deracha conforme la distribucion de normalidad, lo que resulta en que existen productos que presentan caracteristicas que agregan un mayor valor al producto y esten fuera del rango normal de la media y mediana, teniendo una mayor varianza. en cuanto a la varianza el rango de amplitud es mayor en Indeterminado y Legal.
+
+#### Test de varianza.
+
+```{r, echo=FALSE}
+leveneTest(Base_P$PRECIO_AJUSTADO,as.factor(Base_P$DIMENSION_PAPEL),center = "median")
+```
+
+El test de Levene muestra un p-value inferior al limite de 0.05, por lo que uno o más grupos presentan falta de homogeneidad en la varianza. debido a la falta de homogeneidad en la varianza se usará para comparar las medias la tecnica de resampling con permutaciones.
+
+#### Comparacion de medias.
+
+
+```{r, echo=FALSE}
+variable <- Base_P[Base_P$DIMENSION_PAPEL %in% c("LEGAL 8.5 X 14","CARTA 8.5 X 11"),c("PRECIO_AJUSTADO","DIMENSION_PAPEL")]
+n <- length(Base_P[Base_P$DIMENSION_PAPEL %in% c("LEGAL 8.5 X 14","CARTA 8.5 X 11"),]$DIMENSION_PAPEL)
+p <- 9999
+dif <- mean(variable[variable$DIMENSION_PAPEL=="CARTA 8.5 X 11",]$PRECIO_AJUSTADO)-mean(variable[variable$DIMENSION_PAPEL=="LEGAL 8.5 X 14",]$PRECIO_AJUSTADO)
+dis <- matrix(0,n,p)
+
+for(i in 1:p){
+  dis[,i] <- sample(variable$PRECIO_AJUSTADO,n,replace = FALSE)
+}
+
+medias <- rep(0,p)
+
+for(i in 1:p){
+  medias[i] <- abs(mean(dis[,i][variable$DIMENSION_PAPEL=="CARTA 8.5 X 11"])-mean(dis[,i][variable$DIMENSION_PAPEL=="LEGAL 8.5 X 14"]))
+}
+
+mean(medias>=abs(dif))
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(bootES)
+
+bootES(Base_P,R=9999,data.col = "PRECIO_AJUSTADO",group.col = "DIMENSION_PAPEL",contrast = c("CARTA 8.5 X 11","LEGAL 8.5 X 14"),sim="permutation")
+bootES(Base_P,R=9999,data.col = "PRECIO_AJUSTADO",group.col = "DIMENSION_PAPEL",contrast = c("CARTA 8.5 X 11","INDETERMINADO"),sim="permutation")
+bootES(Base_P,R=9999,data.col = "PRECIO_AJUSTADO",group.col = "DIMENSION_PAPEL",contrast = c("INDETERMINADO","LEGAL 8.5 X 14"),sim="permutation")
+```
+
+Teniendo presente que ni una categoria precento una distribucion normal de los datos, y no todas tenian la misma varianza o homestecidad, se comparo las medias con la tecnica de resampling permutaciones con una simulación de monte carlo de 9999 permutaciones, con lo que se puede observar que unicamente el papel tamaño carta y la clasificación indeterminado contiene el numero 0 entre su intervalo, por lo que las medias son aproximadamente iguales,  para los proximos estudios se considerada los resultados indeterminado y tamaño carta como un solo producto, papel bond tamaño carta.
+
+### Requerimiento por varias entidades públicas.
+
+
+```{r, echo=FALSE, message=FALSE}
+Base_P %>% mutate(mes=month(FECHA_PUBLIC_OC,label=TRUE,abbr=FALSE),year= year(FECHA_PUBLIC_OC)) %>% filter(DIMENSION_PAPEL %in% c("CARTA 8.5 X 11","INDETERMINADO")) %>% group_by(year,mes) %>% summarise(Entidades=length(unique(INSTITUCION))) %>% pivot_wider(names_from=mes,values_from=Entidades,values_fill=0,names_sort=TRUE) %>% knitr::kable(caption = "Papel Bond Tamaño Carta")
+```
+
+```{r, echo=FALSE, fig.height=8, fig.width=18, message=FALSE,dpi=200}
+Base_P %>% mutate(mes=month(FECHA_PUBLIC_OC,label=TRUE,abbr=FALSE),year= year(FECHA_PUBLIC_OC)) %>% filter(DIMENSION_PAPEL %in% c("CARTA 8.5 X 11","INDETERMINADO")) %>% group_by(year,mes) %>% summarise(Entidades=length(unique(INSTITUCION))) %>% ggplot(aes(x=mes,y=Entidades,fill=as.factor(year),label=Entidades)) + geom_col(position =  position_dodge2(preserve = "single")) + geom_text(hjust="outward",vjust="outward",size=8) + ggtitle("Cantidad de Entidades Públicas que Adquieren el Producto por cada Mes") + xlab("Meses") + ylab("Entidades Públicas") + labs(fill="Año") + theme(axis.text.y = element_text(colour = "black",size = 25), axis.text.x = element_text(colour = "black",size = 20,angle = 35),axis.title = element_text(size = 30),title = element_text(size = 25),legend.title = element_text(size = 25),strip.text = element_text(size = 25),legend.text = element_text(size = 20))
+```
+
+
+```{r, echo=FALSE, message=FALSE}
+Base_P %>% mutate(mes=month(FECHA_PUBLIC_OC,label=TRUE,abbr=FALSE),year= year(FECHA_PUBLIC_OC)) %>% filter(DIMENSION_PAPEL %in% c("LEGAL 8.5 X 14")) %>% group_by(year,mes) %>% summarise(Entidades=length(unique(INSTITUCION))) %>% pivot_wider(names_from=mes,values_from=Entidades,values_fill=0,names_sort=TRUE) %>% knitr::kable(caption = "Papel Bond Tamaño Legal")
+```
+
+```{r, echo=FALSE, fig.height=8, fig.width=18, message=FALSE,dpi=200}
+Base_P %>% mutate(mes=month(FECHA_PUBLIC_OC,label=TRUE,abbr=FALSE),year= year(FECHA_PUBLIC_OC)) %>% filter(DIMENSION_PAPEL %in% c("LEGAL 8.5 X 14")) %>% group_by(year,mes) %>% summarise(Entidades=length(unique(INSTITUCION))) %>% ggplot(aes(x=mes,y=Entidades,fill=as.factor(year),label=Entidades)) + geom_col(position =  position_dodge2(preserve = "single")) + geom_text(hjust="outward",vjust="outward",size=8) + ggtitle("Cantidad de Entidades Públicas que Adquieren el Producto por cada Mes") + xlab("Meses") + ylab("Entidades Públicas") + labs(fill="Año") + theme(axis.text.y = element_text(colour = "black",size = 25), axis.text.x = element_text(colour = "black",size = 20,angle = 35),axis.title = element_text(size = 30),title = element_text(size = 25),legend.title = element_text(size = 25),strip.text = element_text(size = 25),legend.text = element_text(size = 20))
+```
+
+
+La tablas presentan el numero de entidades públicas que comprarón cada producto en cada mes de cada año, los meses con valores cero es debido a que no se tiene información al respecto, el unico año con toda la información dispobible segun base de datos proporcionada es el año 2020. cada mes se presenta compra de papel bond tamaño carta y legal por las entidades públicas.
+
+### Consumo frecuente.
+
+```{r, echo=FALSE, fig.height=5, fig.width=15, message=FALSE}
+Base_P %>% mutate(year=year(FECHA_PUBLIC_OC),mes=month(FECHA_PUBLIC_OC,label=TRUE,abbr=FALSE)) %>% filter(DIMENSION_PAPEL %in% c("CARTA 8.5 X 11","INDETERMINADO")) %>% group_by(year,mes) %>% summarise(Cantidades=sum(CANTIDAD)) %>% pivot_wider(names_from=mes,names_sort=TRUE,values_from=Cantidades,values_fill=0) %>% knitr::kable(caption = "Consumo Mensual Total de las Entidades Públicas que compran Papel Bond Tamaño Carta")
+```
+
+
+```{r, echo=FALSE, fig.height=5, fig.width=15, message=FALSE}
+Base_P %>% mutate(year=year(FECHA_PUBLIC_OC),mes=month(FECHA_PUBLIC_OC,label=TRUE,abbr=FALSE)) %>% filter(DIMENSION_PAPEL %in% c("LEGAL 8.5 X 14")) %>% group_by(year,mes) %>% summarise(Cantidades=sum(CANTIDAD)) %>% pivot_wider(names_from=mes,names_sort=TRUE,values_from=Cantidades,values_fill=0) %>% knitr::kable(caption = "Consumo Mensual Total de las Entidades Públicas que compran Papel Bond Tamaño Legal")
+```
+
+```{r, echo=FALSE, fig.height=8, fig.width=18, message=FALSE,dpi=200}
+Base_P %>% mutate(year=year(FECHA_PUBLIC_OC),mes=month(FECHA_PUBLIC_OC,label=TRUE,abbr=FALSE)) %>% filter(DIMENSION_PAPEL %in% c("LEGAL 8.5 X 14")) %>% group_by(year,mes) %>% summarise(Cantidades=sum(CANTIDAD)) %>% ggplot(aes(x=mes,y=Cantidades,fill=as.factor(year))) + geom_col(position = position_dodge2(preserve = "single")) + geom_text(aes(label=Cantidades),hjust="outward",vjust="outward",size=6)+ ggtitle("Consumo Mensual de Papel Bond tamaño Legal (resmas)") + xlab("Meses") + labs(fill="Año") +theme(axis.text.y = element_text(colour = "black",size = 25), axis.text.x = element_text(colour = "black",size = 20,angle = 35),axis.title = element_text(size = 30),title = element_text(size = 25),legend.title = element_text(size = 25),strip.text = element_text(size = 25),legend.text = element_text(size = 20))
+```
+
+Las entidades públicas presentarón un mayor consumo de papel bond tamaño carta que el papel bond tamaño legal, mensualmente se presenta compras de los productos por lo que los productos son consumido constantemente, de igual forma los meses que presentan un cero en las cantidades, es debido a que la base de datos no proporciona informacion en los respectivos meses. se presenta graficamente solo el papel bond tamaño legal, debido a que el tamaño carta presenta una compra extraordinaria de resmas de papel, lo que no permite tener una buena apreciacion del grafico de columnas.
+
+### Producto o servicio estandarizable.
+
+El producto bapel bond presenta dos dimensiones de papel tamaño carta y legal en presentación de resmas.
+
+## Datos informativos
+
+### Estandarizado
+
+Los producto papel bond tamaño carta y legal son bienes estandarizados debido a que estan definidos en el mercado con estas dimensiones por todos los productores que los fabrican, asi como la unidad de medida, que es resma. 
+
+
+### Productos sustitutos conocidos
+
+A este respecto no se conoce productos sustitutos para el papel bond tamaño carta o legal, ambos tienen utilidades distintas en la impresión de documentación. existen otros formatos o dimensiones en el papel, pero tambien tienen otros usos particulares,  existen productos sustitutos dentro de la misma linea de producto para el papel tamaño carta y legal, debido a productos con precios más altos que otros por contener caracteristicas funcionales que agregan valor al bien, de tal forma que las otras marcas del papel con precios más bajos llegan a ser sustitutos.
+
+### Variabilidad del Precio
+
+```{r, echo=FALSE}
+Base_P %>% mutate(year=year(FECHA_PUBLIC_OC),mes=month(FECHA_PUBLIC_OC,label=TRUE,abbr=FALSE))%>% filter(DIMENSION_PAPEL %in% c("CARTA 8.5 X 11","INDETERMINADO")) %>% group_by(year,mes) %>% summarise(Precio_Promedio=mean(PRECIO_UNITARIO)) %>% pivot_wider(names_from=mes,names_sort=TRUE,values_from=Precio_Promedio,values_fill=0) %>% knitr::kable(caption = "Precios Promedios de Papel tamaño Carta")
+```
+
+
+
+```{r, echo=FALSE, fig.height=10, fig.width=18,dpi=200}
+Base_P %>% mutate(year=year(FECHA_PUBLIC_OC),mes=month(FECHA_PUBLIC_OC,label=TRUE,abbr=FALSE))%>% filter(DIMENSION_PAPEL %in% c("CARTA 8.5 X 11","INDETERMINADO")) %>% ggplot(aes(x=mes,y=PRECIO_UNITARIO,fill=as.factor(year))) + geom_boxplot() + facet_grid(year~.) + ggtitle("Boxplot de Precios de Papel Bond Tamaño Carta") + xlab("Meses") + ylab("Precios Promedio Ajustado") + labs(fill="Año") + theme(axis.text.y = element_text(colour = "black",size = 25),axis.title = element_text(size = 30),axis.text.x = element_text(colour = "black",size = 20,angle = 30),title = element_text(size = 30),legend.title = element_text(size = 25),strip.text = element_text(size = 25),legend.text = element_text(size = 20))
+```
+
+```{r, echo=FALSE}
+Base_P %>% mutate(year=year(FECHA_PUBLIC_OC),mes=month(FECHA_PUBLIC_OC,label=TRUE,abbr=FALSE))%>% filter(DIMENSION_PAPEL %in% c("LEGAL 8.5 X 14")) %>% group_by(year,mes) %>% summarise(Precio_Promedio=mean(PRECIO_UNITARIO)) %>% pivot_wider(names_from=mes,names_sort=TRUE,values_from=Precio_Promedio,values_fill=0) %>% knitr::kable(caption = "Precios Promedios de Papel tamaño Legal")
+```
+
+```{r, echo=FALSE, fig.height=10, fig.width=18,dpi=200}
+Base_P %>% mutate(year=year(FECHA_PUBLIC_OC),mes=month(FECHA_PUBLIC_OC,label=TRUE,abbr=FALSE))%>% filter(DIMENSION_PAPEL %in% c("LEGAL 8.5 X 14")) %>% ggplot(aes(x=mes,y=PRECIO_UNITARIO,fill=as.factor(year))) + geom_boxplot() + facet_grid(year~.) + ggtitle("Boxplot de Precios de Papel Bond Tamaño Legal") + xlab("Meses") + ylab("Precios Promedio Ajustado") + labs(fill="Año") + theme(axis.text.y = element_text(colour = "black",size = 25), axis.text.x = element_text(colour = "black",size = 20,angle = 30),axis.title = element_text(size = 30),title = element_text(size = 30),legend.title = element_text(size = 25),strip.text = element_text(size = 25),legend.text = element_text(size = 20))
+```
+
+En las tablas se visualiza precios promedios sin ajustar al tiempo actual, y que corresponden a cada mes y año. en los graficos de boxplot se observa el rango de precios de los productos papel bond tamaño carta y legal. ambos productos presentan valores atipicos teniendo más el papel bond tamaño carta. en cuanto a los precios el papel bond tamaño carta presento precios promedios aproximadamente similares en el año 2020, comparando con el año 2019 que presente precios promedios mayor que los del 2020. es meritorio recalcal que no se tiene información completa de los años 2019 y 2021.
+
+En caso del producto papel bond tamaño legal de igual forma presenta precios aproximadamente constantes en el año 2020. por lo tanto el precio de los productos papel bond tamaño carta y legal, no presento mucha variabilidad en la linea de tiempo segun registros de base de datos.
+
+
+### Estabilidad y tendencia de la demanda del producto
+
+```{r, echo=FALSE, fig.height=8, fig.width=18, message=FALSE, warning=FALSE,dpi=200}
+Base_P %>% mutate(year=year(FECHA_PUBLIC_OC),mes=month(FECHA_PUBLIC_OC,label=FALSE)) %>% filter(DIMENSION_PAPEL %in% c("CARTA 8.5 X 11","INDETERMINADO")) %>% group_by(year,mes) %>% summarise(Cantidad = sum(CANTIDAD)) %>% unite(year,mes,col="mes_year",sep="-") %>% mutate(mes_year=ym(mes_year)) %>% ggplot(aes(x=mes_year,y=Cantidad,label=Cantidad)) + geom_line(color="red",size=1) + geom_point(color="blue",size=3) + geom_text(hjust="right",vjust="outward",size=6) + ggtitle("Tendencia Papel Bond Carta") + xlab("Fecha") + ylab("Cantidad") + scale_x_date(date_labels = "%Y-%B",date_breaks = "2 months") + theme(axis.text.y = element_text(colour = "black",size = 25),axis.title = element_text(size = 30),axis.text.x = element_text(colour = "black",size = 15),title = element_text(size = 35),legend.title = element_text(size = 25),strip.text = element_text(size = 25),legend.text = element_text(size = 20)) + coord_cartesian(ylim = c(0,25000))
+```
+
+
+```{r, echo=FALSE, fig.height=8, fig.width=18, message=FALSE, warning=FALSE,dpi=200}
+Base_P %>% mutate(year=year(FECHA_PUBLIC_OC),mes=month(FECHA_PUBLIC_OC,label=FALSE)) %>% filter(DIMENSION_PAPEL %in% c("LEGAL 8.5 X 14")) %>% group_by(year,mes) %>% summarise(Cantidad = sum(CANTIDAD)) %>% unite(year,mes,col="mes_year",sep="-") %>% mutate(mes_year=ym(mes_year)) %>% ggplot(aes(x=mes_year,y=Cantidad,label=Cantidad)) + geom_line(color="red",size=1) + geom_point(color="blue",size=3) + geom_text(hjust="right",vjust="outward",size=6) + ggtitle("Tendencia Papel Bond Legal") + xlab("Fecha") + ylab("Cantidad") + scale_x_date(date_labels = "%Y-%B",date_breaks = "2 months") + theme(axis.text.y = element_text(colour = "black",size = 25),axis.text.x = element_text(colour = "black",size = 15),axis.title = element_text(size = 30),title = element_text(size = 40),legend.title = element_text(size = 25),strip.text = element_text(size = 25),legend.text = element_text(size = 20))
+```
+
+Como se puede observar en las graficas de tendencia de la demanda de papel bond tamaño carta y legal, las compras mensuales de los productos presente una alza del año 2019 al año 2020, no obstante no presenta un patron ciclico, de temporada y una tendencia creciente o decreciente. a este respecto la demanda de los productos es variable y sin ningun patron o estabilidad.
+
+# 1.3 Conclusiones
+
+Los productos papel bond tamaño carta y legal son bienes de uso comun con una estandarización en las dimension del papel, son requeridos mensualmente por las entidades públicas, presentarón un precio promedio sin ajustar al tiempo actual aproximadamente iguales, no presentan tendencia a lo largo del tiempo por lo que su adquisicion es variable.
+
+se resguarda base de datos para los estudios de mercado, con el nombre papel bond.
+
+```{r}
+library(writexl)
+write_xlsx(Base_P,path = "../Base de Datos Para Estudios de Mercado/Papel_bond.xlsx")
+```
+
+
+# 1.4 Recomendaciones
+
+* Realizar los estudios de Mercado por separado de los producto papel bond tamaño carta y legal.
+* Considerar en los estudios de mercado que el producto papel bond tamaño carta es tomado en cuenta como uno con la categoria Indeterminado.
+* Conocer en el estudio de precios que entidades públicas y proveedores presentan los precios atipicos de los productos.
+* Realizar Reuniones de Socialización de los Productos.

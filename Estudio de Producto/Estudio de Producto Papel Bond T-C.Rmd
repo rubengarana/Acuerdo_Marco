@@ -1,0 +1,162 @@
+---
+title: "Estudio de Producto"
+author: "Dirección Especifica de Acuerdos Marco"
+date: "`r Sys.Date()`"
+output: 
+  word_document: 
+    fig_caption: yes
+    toc: yes
+---
+
+# Breve Memoria Técnica de Elaboración del Producto.
+
+El presente estudio se elaboró teniendo presente la base de datos de orden de compra estructura del periodo sujeto a estudio, de las que se consideró el costo total de gasto por institución del producto y las especificaciones técnicas o funcionales. También se utilizó el PAC de las unidades de adquisición central de las 10 instituciones públicas potenciales resultantes del Estudio de demanda del producto papel bond tamaño carta.
+
+# Ficha de Información del Producto.
+
+## Información del Producto.
+
+|Generalidades del Producto|
+|--------------------------|
+
++:---------------------------------+:------------------------------------+
+|1. Nombre del producto:           |                                     |
++----------------------------------+-------------------------------------+
+|2. Especificaciones del producto: |* Area: 8.5" x 11"                   |
+|                                  |* unidad medida: Resma 500 unidades  |
+|                                  |*                                    |
++----------------------------------+-------------------------------------+
+|3. El producto es:                |- Bien     [X]                       |
+|                                  |- Servicio [ ]                       |
++----------------------------------+-------------------------------------+
+|4. El producto es:                |- Capital [ ]                        |
+|                                  |- Consumo [X]                        |
++----------------------------------+-------------------------------------+
+|5. El producto es:                |- De uso único [X]                   |
+|                                  |- Reusable     [X]                   |
+|                                  |- N/A          [ ]                   |
++----------------------------------+-------------------------------------+
+|6. El producto:                   |- Caduca    [ ]                      |
+|                                  |- No Caduca [X]                      |
++----------------------------------+-------------------------------------+
+|7. Frecuencia de Uso del Producto:|- Ocacional [ ]                      |
+|                                  |- Frecuente [ ]                      |
+|                                  |- Permanente[X]                      |
++----------------------------------+-------------------------------------+
+|8. Usuario Final del Producto:    |- Instituciones[X]                   |
+|                                  |- Ciudadanos   [ ]                   |
++----------------------------------+-------------------------------------+
+
+|Características del Producto|
+|----------------------------|
+
++:---------------------------------+:------------------------------------+
+|9. En que etapa del ciclo de vida |- Introducción [ ]                   |
+|se encuentra el producto:         |- Crecimiento  [ ]                   |
+|                                  |- Madurez      [X]                   |
+|                                  |- Declive      [ ]                   |
++----------------------------------+-------------------------------------+
+|10. Tiene productos               |- Sí [ ]                             |
+|complementarios                   |  * Cuales:                          |
+|                                  |- No [X]                             |
++----------------------------------+-------------------------------------+
+|11. El producto es un insumo o    |- Sí [X]                             |
+|matería prima para producir otro  |                                     |
+|producto                          |- No [ ]                             |
++----------------------------------+-------------------------------------+
+|12. Las entidades públicas han    |- Sí [ ]                             |
+|experimentado escazes del producto|- No [X]                             |
++----------------------------------+-------------------------------------+
+|13. El producto se almacenará en  |- Sí   [X]                           |
+|bodega.                           |- No   [ ]                           |
+|                                  |- N/A  [ ]                           |
++----------------------------------+-------------------------------------+
+|14. El producto está protegido    |- Sí [ ]                             |
+|por una patente.                  |- No [X]                             |
++----------------------------------+-------------------------------------+
+|15. Existen genéricos             |- Sí [ ]                             |
+|                                  |  * Cuales:                          |
+|                                  |- No [X]                             |
++----------------------------------+-------------------------------------+
+|16. Tiene producto sustitutos     |- Sí [ ]                             |
+|                                  |  * Cuales:                          |
+|                                  |- No [X]                             |
++----------------------------------+-------------------------------------+
+|17. Hay alternativas o cambios    |- Sí [X]                             |
+|tecnológicos que permitan cambiar |  * Cuales: Politicas de ahorro,     |
+|o eleminar la necesidad.          | permiten disminuir el consumo.      |
+|                                  |- No [ ]                             |
++----------------------------------+-------------------------------------+
+
+Las generalidades del producto indican que los destinatarios finales son las entidades públicas, siendo un bien de consumo con frecuencia diaria o permannete, el uso puede ser unico o reusable en dependencia de si las entidades reciclan el bien, siendo la demanda constante y frecuente. Entre las principales caracteristicas del producto en el mercado, se encuentra en un ciclo de vidad de madurez de tal forma que existen una amplia oferta, asi mismo no hay productos complementarios o sustitutos que puedan afectar la demanda, sin embargo politicas de ahorro por consumo del bien podrian reducir ligeramente el consumo del mismo y por ende la frecuencia de compra.
+
+Por tratarse de un bien presenta especificaciones tecnicas o funcionales siguientes unidad de medida: resma y dimension del papel: 8.5" x 11", por lo que cada resma ocupa espacio considerable de el almacen donde se resguarda.
+
+# Matriz Kraljic.
+
+Para determinar si el producto en estudio es adecaudo para implementarse en un Acuerdo Marco se hace uso de la matriz kraljic, la que esta compuesta de dos variables o dimensiones y que permite clasificar al producto en una categoria particular conforme siguiente imagen:
+
+![**Matriz Kraljic**](C:/Users/rubena/Desktop/Acuerdos Marco/Acuerdo Marco/Matriz Kracjil.JPG){ width=150% }
+
+La variable peso financiero se determina considerando el porcentaje de gasto ejecutado por las entidades públicas en el producto en estudio, es decir las compras realizadas del producto sobre su presupuesto.
+
+La variable índice de impacto se determina mediante dos sub variables relevancia del suministro y riesgo de no adquirir el producto. cada variable tiene niveles de clasificación.
+
+La relevancia del suministro se  divide   en cuatro categorías:
+
+-	Alto impacto: Cuando el suministro es irremplazable 
+-	Moderado impacto: Cuando el proceso de reemplazo del suministro es costoso 
+-	Bajo impacto: Cuando el suministro es fácilmente reemplazable
+-	Insignificante impacto: Cuando el suministro es omisible
+
+El riesgo de no adquirir el suministro se divide en:
+
+-	Riesgo alto: En el caso que haya existido escasez
+-	Riesgo es moderado: En caso de que haya existido escasez moderada
+-	Riesgo bajo: si el suministro es de uso cotidiano 
+-	Riesgo es insignificante: si el suministro es abundante
+
+Cada escala se mide o da un valor del 1 al 4 de la más insginificante a alta respectivamente. una vez obtenido la escala de cada sub varible se saca un promedio, siendo el resultado el indice de impacto,
+
+Una vez clasificado el producto segun matriz kraljic se procede a calificar si el producto es adecaudo para Acuerdo Marco segun resumen siguiente.
+
+![**Resumen Matriz**](C:/Users/rubena/Desktop/Acuerdos Marco/Acuerdo Marco/Resumen Matriz Kraljic.JPG)
+
+# Análisis de la Matriz Kraljic.
+
+## Indice de Impacto.
+
+El indice de impacto resulta de la combinacion de relevancia y riesgo de no adquirir el bien o suministro, debido a que el bien es abundante en el mercado su riesgo es insignificante por lo que su valor en escala es 1; debido a que se considera unicamente con una especificación tecnica (tamaño carta) el producto es facilmente reemplazable entre los mismos bienes de distintas marcas y caracteristicas tecnica dentro de la demanda existente del mercado nacional, resultando una escal de 2 por tener un bajo impacto.
+
+El promedio de la combinación de ambas variables resulta en un Indice de impacto con escala 2. 
+
+## Peso Financiero.
+
+```{r, message=FALSE, warning=FALSE}
+library(readxl)
+library(tidyverse)
+library(janitor)
+P <- read_xlsx(path = "C:/Users/rubena/Desktop/Acuerdos Marco/Acuerdo Marco/Base de Datos Para Estudios de Mercado/Papel_bond.xlsx",sheet = 1)
+P <- P %>% filter(DIMENSION_PAPEL %in% c("INDETERMINADO","CARTA 8.5 X 11")) %>% mutate(COSTO_TOTAL=PRECIO_UNITARIO*CANTIDAD) %>% group_by(INSTITUCION) %>% summarise(COSTO_TOTAL=round(sum(COSTO_TOTAL),2)) %>% arrange(desc(COSTO_TOTAL)) %>% head(10) %>% adorn_totals() 
+
+knitr::kable(P,format.args = list(big.mark=","),caption = "Compra Efectuadas en el periodo de estudio.")
+```
+
+La relación de las compras efectuadas del producto sobre el presupuesto total de las principales entidades públicas compradoras presente un porcentaje de compra bajo, por lo que el peso financiero del producto en el sector público no es muy representativo.
+
+## Clasificación del Producto.
+
+La combinación de indice de impacto y peso financiero conforme matriz kraljil clasifican al producto papel bond tamaño carta como rutinario, categoria recomendada en un producto para ser utilizada en un Acuerdo Marco, debido a estar estandarizado, representa costos bajos dentro de las entidades públicas, existen una amplia cantidad de oferentes y hay muchos compradores, por lo tanto las entidades no necesitan prestar atención a producto poco especializado en sus procesos de compra.
+
+# Conclusiones.
+
+- El producto es recomendado para Acuerdo Marco por clasificarse como rutinario segun matriz kraljic.
+- El producto en el sector público es constantemente consumido y con frecuencia mensual de compra, no tinen producto complementarios de los que dependa y no tiene sustitutos que afecten su demanda.
+- El producto es definido como papel bond tamaño carta (8.5" X 11"), con unidad de medida resmad de 500 unidades.
+- El producto se almacena en bodega y debido a su tamaño o área de dimensión ocupan un espacio considerado dentro de una bodega, por lo tanto es posible que las entidades públicas tengan bodegas de poco tamaño y sea una causas de las frecuentes adquisiciones del producto.
+
+# Acciones a Seguir.
+
+- Proceder con los restantes estudios del mercado.
+- Investigar con las entidades públicas ¿Por que frecuentan realizar varias ordenes de compra para adquirir el producto?
+- Investigar con las enitdades públicas si existen otras preferencias distintas a la del producto en investigación y que afecten su demanda.

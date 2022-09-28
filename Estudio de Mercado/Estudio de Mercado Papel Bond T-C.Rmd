@@ -1,0 +1,222 @@
+---
+title: "Estudio de Mercado"
+author: "Dirección Especifica de Acuerdos Marco"
+date: "`r Sys.Date()`"
+output: 
+  word_document: 
+    fig_caption: yes
+    toc: yes
+---
+
+
+```{r Carga de Base de Datos, message=FALSE, warning=FALSE, include=FALSE}
+library(tidyverse)
+library(lubridate)
+library(readxl)
+library(ggplot2)
+library(forecast)
+mercado <- read_xlsx(path = "C:/Users/rubena/Desktop/Acuerdos Marco/Acuerdo Marco/Base de Datos Para Estudios de Mercado/Papel_bond.xlsx")
+mercado <- mercado[mercado$DIMENSION_PAPEL %in% c("CARTA 8.5 X 11","INDETERMINADO"),]
+```
+
+# Tabla de Resumen de Resultado y Análisis de Riesgo de Distribución.
+
+
+## *Resumen de Resultados*
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+mercado %>% mutate(year=as.character(year(FECHA_PUBLIC_OC))) %>% group_by(year) %>% summarise(Cantidad=length(unique(INSTITUCION))) %>% knitr::kable(caption = "Número de Entidades Públicas")
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+mercado %>% mutate(year=as.character(year(FECHA_PUBLIC_OC))) %>% group_by(year) %>% summarise(Demanda=sum(CANTIDAD)) %>% knitr::kable(caption = "Demanda Anual",format.args = list(big.mark=","))
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+mercado %>% mutate(year=as.character(year(FECHA_PUBLIC_OC))) %>% group_by(year,DEPARTAMENTO_PROVEEDOR) %>% summarise(Demanda=sum(CANTIDAD)) %>% pivot_wider(names_from=year,values_from=Demanda,values_fill=0) %>%knitr::kable(caption = "Demanda Anual por Departamento",format.args = list(big.mark=","))
+```
+
+# Análisis de Tabla de Resumen de Resultado y Análisis de Riesgo de Distribución.
+
+## 1.Identificar potenciales entidades públicas que formen parte del Acuerdo Marco.
+
+Se inicia identificando a las principales entidades públicas que compraron el mayor número de unidades de resma de papel bond tamaño carta, asi como en cuál fue el procedimiento de contratación más utilizado y a que proveedores fueron los que adquirieron las entidades públicas.
+
+1. 10 entidades públicas con mayor número de resmas de papel adquidaras:
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+mercado %>% group_by(INSTITUCION) %>% summarise(Cantidad=sum(CANTIDAD)) %>% arrange(desc(Cantidad)) %>% head(10) %>% knitr::kable(caption = "Compra de resmas de Papel Bond tamaño Carta",format.args = list(big.mark=","))
+```
+
+2. Procedimientos en los que se ha realizado la compra del producto.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(janitor)
+mercado %>% group_by(TIPO_PROCEDIMIENTO) %>% summarise(Cantidad = sum(CANTIDAD),Porcentaje_por_tipo_proced=round(Cantidad/sum(mercado$CANTIDAD),3),Ordenes_Compra=length(NUMERO_OC)) %>% arrange(desc(Cantidad)) %>% adorn_totals() %>% knitr::kable(caption = "Tipo de Procedimientos de Contratación",format.args = list(big.mark=","))
+```
+
+3. Indentificar los proveedores de las 10 entidades públicas que mas adquieren el producto.
+
+En el periodo de estudio se presentaron un total de `r length(unique(mercado$PROVEEDOR))`.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+mercado %>% group_by(INSTITUCION) %>% summarise(Cantidad_proveedores=length(unique(PROVEEDOR)),Cantidad=sum(CANTIDAD),Ordenes_Compra=length(NUMERO_OC)) %>% arrange(desc(Cantidad)) %>% head(10) %>% select(!Cantidad) %>% knitr::kable()
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+mercado %>% group_by(PROVEEDOR) %>% summarise(Cantidad=sum(CANTIDAD),Tipo_Proveedor=unique(TIPO_PROVEEDOR),Cantidad_Instituciones=length(unique(INSTITUCION)),Ordenes_Compra=length(NUMERO_OC)) %>% arrange(desc(Cantidad)) %>% head(10) %>% knitr::kable(caption = "Top 10 de Proveedores",format.args = list(big.mark=","))
+```
+
+Conforme información presentada en tablas, se aprecia que las entidades públicas realizaron la adquisión del producto con mayor frecuencia en procedimiento de contratacion menor, siendo el procedimiento con mayor numero de resmas de papel despues de contratacion simplificada, el que parece indicar una adquisicion exepcional por parte del Ministerio de educacion al proveedor Empresa Nicaraguense de Importaciones y Exportaciones a traves de 2 ordenes de compra. El resto de entidades públicas presentan la cantidad de proveedores que han adquirido y la cantidad de ordenes de compra efectuadas en el periodo de estudio.
+
+### Uso y Consumo Frecuente del Producto.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+mercado %>% mutate(Year=as.factor(year(FECHA_PUBLIC_OC)),mes=as.factor(month(FECHA_PUBLIC_OC,label=TRUE,abbr=FALSE))) %>% group_by(Year,mes) %>% summarise(Cantidad=sum(CANTIDAD)) %>% pivot_wider(names_from=mes,values_from=Cantidad,names_sort=TRUE,values_fill=0) %>% knitr::kable(caption = "Compras por año y mensual",format.args = list(big.mark=","))
+```
+
+Conforme base de datos proporcionadas y en el procesamiento de los datos en el estudio previo, los años 2019 y 2021 no presentan información completa para determinar la cantidad de resmas de papel del producto adquiridas por las entidades públicas en cada mes de cada año, solo se tiene datos del año 2020, en los que se puede observar que mensualmente se adquiere el producto por las entidades públicas por lo hay un consumo mensual del bien. no obstante, no se puede comparar con los dos años mencionados, para conocer la estabilidad o variabilidad de adquirir el bien.
+
+### Condiciones a Cumplir.
+
+Para poder aplicar un producto para Acuerdo Marco es necesario cumplir con las siguientes condiciones:
+
+* Condición Producto-Demanda.
+
+Esta condición describe la relación entre la variable entidades públicas y el tipo de producto o estandarización. conforme siguiente tabla se observa el resultado por la intersección del valor de cada variable indicando si el producto aplica o no para Acuerdo Marco.
+
+![](C://Users/rubena/Desktop/Acuerdos Marco/Acuerdo Marco/Producto-Demanda.JPG)
+
+El producto en estudio cumple con la condición producto demanda, debido a que es un bien comun pues esta estandarizado con una dimension de 8.5 X 11 pulgados y presente distintas marcas, y tambien por ser adquirido por varias entidades públicas conforme siguiente tabla.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+mercado %>% group_by(year=year(FECHA_PUBLIC_OC)) %>% summarise(Cantidad_Entidades=length(unique(INSTITUCION))) %>% knitr::kable(caption = "Numero de Entidades Públicas por año")
+```
+
+* Condicion Estructura de Mercado.
+
+Para detierminar la estructura de mercado es necesrio conocer como se distribuye la proporcion del producto entre todos los compradores y vendedores es decir la oferta y demanda. El siguiente cuadro muestra los resultados de oferta y demanda.
+
+![](C://Users/rubena/Desktop/Acuerdos Marco/Acuerdo Marco/Esctructura de Mercado.JPG)
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+m <- mercado %>% mutate(year=as.character(year(FECHA_PUBLIC_OC))) %>% select(c(INSTITUCION,year,CANTIDAD)) %>% pivot_wider(names_from=year,values_from=CANTIDAD,values_fn=sum,values_fill=0) %>% adorn_totals(where="col") %>% arrange(desc(Total)) %>% head(10) %>% mutate(Porcentaje=cumsum(round(Total/sum(mercado$CANTIDAD),3)))
+
+o <- mercado %>% mutate(year=as.character(year(FECHA_PUBLIC_OC))) %>% select(c(PROVEEDOR,year,CANTIDAD)) %>% pivot_wider(names_from=year,values_from=CANTIDAD,values_fn=sum,values_fill=0) %>% adorn_totals(where="col") %>% arrange(desc(Total)) %>% head(10) %>% mutate(Porcentaje=cumsum(round(Total/sum(mercado$CANTIDAD),3)))
+
+knitr::kables(list(knitr::kable(m,caption = "Estructura de Demanda",format.args = list(big.mark=",")),knitr::kable(o,caption = "Estructura de Oferta",format.args = list(big.mark=","))))
+```
+
+En cuanto a la estructura de la demanda tenemos un total de `r length(unique(mercado$ISTITUCION))` instituciones públicas en el periodo de estudio, en la tabla se presente que la entidad con mayor numero de compras presenta un `r m[1,]$Porcentaje` porciento, y si consideramos hasta la 3 entidad que adquirio más el producto hay un `r m[3,]$Porcentaje` porciento. por lo tanto las 3 entidades públicas que adquirieron más el producto suman un total porcentual inferior al 85% del total del producto especifico, concluyendose que en el mercado del producto papel bond tamaño carta hay muchos compradores con un grado de moderado de concentración.
+
+```{r, message=FALSE, warning=FALSE, include=FALSE}
+IH <- mercado %>% mutate(year=as.character(year(FECHA_PUBLIC_OC))) %>% select(c(PROVEEDOR,year,CANTIDAD)) %>% pivot_wider(names_from=year,values_from=CANTIDAD,values_fn=sum,values_fill=0) %>% adorn_totals(where="col") %>% arrange(desc(Total)) %>% mutate(Porcentaje=round(Total/sum(mercado$CANTIDAD),3)) %>% select(Porcentaje) %>% map(function(x){(x*100)^2}) %>% unlist() %>% sum() %>% floor()
+```
+
+
+En cuanto a la estructura de la oferta tenemos un total de `r length(unique(mercado$PROVEEDOR))` proveedores en el periodo de estudio, el proveedor con la mayor participación de mercado tiene un `r o[1,]$Porcentaje` porciento, la razon de concentracion C3(Tres primeros proveedores) es de `r o[3,]$Porcentaje` porciento, inferior al 85% para ser clasificado como un oligopolio. a este respecto el indice de Herfindhal es de `r IH`. El resultado es mayor a 2500 por lo tanto el mercado se encuentra altamente concentrado en unos pocos proveedores.
+
+El resultado de la estructura de demanda con una concentración moderada del producto en pocos compradores y de la estructura de oferta con una concentración alta en pocos proveedores, ubica la  estructura mercado conforme cuadro de oferta y demanda en una condición similar o proxima a oligopolio y oligopsonio, condición adecuada para un acuerdo marco.
+
+## Cuantificar la cantidad anual de compra del producto por cada entidad.
+
+Con base a información procesada de base de datos, se precede a realizar los calculos y graficos que permiten presentar la demanda del producto papel bond tamaño carta.
+
+### Estimación de la curva de demanda.
+
+```{r, echo=FALSE, fig.height=8, fig.width=18, message=FALSE, warning=FALSE,dpi=200}
+mercado %>% ggplot(aes(x=CANTIDAD,y=PRECIO_AJUSTADO,color=TIPO_PROVEEDOR)) + geom_point() + coord_cartesian(xlim = c(0,4000)) + facet_grid(.~TIPO_PROVEEDOR) + theme(legend.position = "none",axis.text.x = element_text(color = "black",size = 20),axis.text.y = element_text(color = "black",size = 20),axis.title = element_text(color = "black",size = 25),strip.text = element_text(colour = "black",size = 18),title = element_text(size = 28,color = "black",vjust = 0.5)) + xlab("Cantidades de Resmas") + ylab("Precio Ajustado") + ggtitle("Demanda de Papel Bond tamaño carta a nivel institucional")
+```
+
+Las graficas de dispersión muestra una mayor tendencia de los proveedores juridicos a proporcionar un menor precio a mayor numero de resmas de papel, los proveedores naturales presentan cierta tendencia, esto equivale a la demanda individual por cada orden de compra de las entidades públicas, no obstante se estimará la curva de demanda agregada del mercado de papel bond en el sector público.
+
+```{r, echo=FALSE, fig.height=8, fig.width=18, message=FALSE, warning=FALSE,dpi=  200}
+mercado %>% mutate(Rango_Precio=cut(PRECIO_AJUSTADO,breaks=(max(PRECIO_AJUSTADO)-min(PRECIO_AJUSTADO))/5)) %>% group_by(Rango_Precio) %>% summarise(Precio=mean(PRECIO_AJUSTADO),Cantidad=sum(CANTIDAD)) %>% ggplot(aes(x=Cantidad,y=Precio)) + geom_point()+ geom_smooth(se = FALSE) + coord_cartesian(xlim = c(0,20000)) + ggtitle("Curva de Demanda agregada del sector público del Papel Bond tamaño carta") + xlab("Cantidad de Resmas") + theme(axis.title = element_text(size = 25,color="black"),axis.text = element_text(size = 20,color="black"),title = element_text(size = 20,color = "black"))
+```
+
+La curva de demanda agregada de papel bond tamaño carta muestra cierto grado de correlación entra las variables precio y cantidad, parece indicar una relación inversamente proporcional, la grafica de dispersión muestra una tendencia curvelinea logaritmica, se procedera a transformar la variable cantidad mediante logaritmo base 10.
+
+```{r, fig.height=8, fig.width=18, message=FALSE, warning=FALSE}
+mo <- mercado %>% mutate(Rango_Precio=cut(PRECIO_AJUSTADO,breaks=(max(PRECIO_AJUSTADO)-min(PRECIO_AJUSTADO))/5)) %>% group_by(Rango_Precio) %>% summarise(Precio=mean(PRECIO_AJUSTADO),Cantidad=sum(CANTIDAD))
+
+mo %>% ggplot(aes(x=log(Cantidad),y=Precio)) + geom_point()+ geom_smooth(method = "lm") + ggtitle("Curva de Demanda agregada semilogaritmica del sector público del Papel Bond tamaño carta") + xlab("logaritmo de Cantidad de Resmas") + theme(axis.title = element_text(size = 25,color="black"),axis.text = element_text(size = 20,color="black"),title = element_text(size = 20,color = "black"))
+```
+
+Ajustado a una funcion semilogaritmica la grafica muestra una relacion inversamente proporcional entre la variable precio y el logaritmo de la variable cantidades, el coeficiente de correlacion es de `r cor(mo$Precio,log(mo$Cantidad))`. esto indica que la curva de demanda agregada del sector público del mercado de papel bond tamaño carta presenta una correlación negativa fuerte entre ambas variable, a mayor numero de cantidades menor precio o a menor precio mmayor numero de resmas de papel.
+
+Se procede a determinar la ecuación lineal que estima la curva de demanda agregada.
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+ml <- summary(lm(log(Cantidad)~Precio,data = mo))
+ml
+```
+
+El modelo es lineal, siendo la variable dependiente el logaritmo de cantidades y la variable independiente el precio. el modelo presenta que la variable precio es significativa distinta a cero, y el coeficiente de determinacion de `r ml$r.squared` indica que el modelo no es totalmente explicado con la variable precio aun presentando un fuerte correlación entre ambas variables, por lo tanto el sector público adquiere más cantidades de resmas de papel a un menor precio o los proveedores estan dispuestos a ofertar un menor precio por volumen de compra, es importante considerar que el modelo solo en parte explicado por la variable precio, otras variables como tamaño de entidad publica puede ser una variable explicativa debido a mayor numero de personal más cantidades de resmas de papel, asi de igual forma hay que tener presente que las cantidades de resmas de papel incluyen distintos papel bond tamaño carta que se pueden diferenciar por marca o contener otras especificaciones tecnicas o funcionales distintas al la dimension 8.5 X 11" que pueden agregar valor al producto, de tal forma que se visualicen precios altos por pocas cantidades.
+
+Desarrollar un buen modelo predictivo para la demanda agregada del sector publico escapa de los propositos del presente documento, no obstante la estimación de la demanda a traves de la variable demanda y precio ayuda a conocer que el mercado de papel bond existe una relacion inversamente proporcional del producto a mayor cantidad de resmas menor precio unitario.
+
+### Proyección de la demanda.
+
+```{r, echo=FALSE, fig.height=8, fig.width=18, message=FALSE, warning=FALSE}
+ft <- mercado %>% mutate(year=year(FECHA_PUBLIC_OC),mes=month(FECHA_PUBLIC_OC)) %>% unite(year_mes,year,mes,sep="-") %>% group_by(ym(year_mes)) %>% summarise(Cantidad=sum(CANTIDAD)) %>% filter(`ym(year_mes)`>="2020-01-01",`ym(year_mes)`<"2021-01-01") %>% select(Cantidad) %>% ts(start = c(2020,1),frequency = 12)
+
+autoplot(ft,xlab = "Meses-Año",ylab = "Cantidades",main = "Proyecciones",size=2) + theme(axis.title = element_text(size = 25,color="black"),axis.text = element_text(size = 20,color="black"),title = element_text(size = 20,color = "black"),legend.text = element_text(color="black",size = 18)) + autolayer(meanf(ft,h=3),PI=FALSE,series = "Media",size=2) + autolayer(naive(ft,h=3),PI=FALSE,series = "Ingenio",size=2) + autolayer(snaive(ft,h=3),PI=FALSE,series = "Ingenio Temporal",size=2) + autolayer(rwf(ft,h=3,drift = TRUE),PI=FALSE,series = "Deriva",size=2) + coord_cartesian(ylim = c(0,25000))
+```
+
+Para la proyección de la demanda del papel bond tamaño carta en unidad de medida resmas, unicamente se realiza con datos de las compras mensuales del año 2020, debido a que el año 2019 y 2021 son años con información imcopleta. a este respecto por unicamente disponer de información de un año, las proyecciones no se dispone de la suficiente información para realizar proyecciones con metodos más complejos, por lo que se trabara con media, ingenio, ingenio temporal y Deriva.
+
+La grafica presenta cada metodo utilizado para proyectar los tres primeros periodos mensuales a futuro del año 2021, el metodo de media se ve afectado por el valor atipico de compra realizado por el Ministerio de Educación, el metodo ingenio temporal es el más parecido a las adquisiciones registradas debido a que su calculo procede a las ultimos registros por periodo mensual registrado. es meritorio destacar que la linea de grafica o compra mensual del producto no presentan una tendencia, es decir no hay un patron.
+
+Debido a la falta de información no es posbible conocer si los datos presentan un patron ciclico, por temporarda y si existe una tendencia de aumento o dismininución en la compra del producto, de igual forma no es posible comparar información de un año con otro. a este respecto los metodos de proyeccion presentan posibles valores futuros de compras munsuales por las entidades públicas.
+
+### Cuantificación monetaria promedio de compra del producto.
+
+```{r, echo=FALSE, fig.height=8, fig.width=18, message=FALSE, warning=FALSE}
+mercado %>% mutate(year=year(FECHA_PUBLIC_OC),mes=month(FECHA_PUBLIC_OC)) %>% group_by(year,mes) %>% summarise(Cantidad=sum(CANTIDAD),Numero=length(unique(INSTITUCION)),Precio_Promedio=mean(PRECIO_AJUSTADO)) %>% filter(year==2020) %>% mutate(Monto_Compra_Promdio=((Cantidad*Precio_Promedio)/Numero),Cantidad_promedio=round(Cantidad/Numero,0)) %>% unite("year_mes",year,mes,sep="-") %>% mutate(year_mes=ym(year_mes)) %>% ggplot(aes(x=year_mes,y=Cantidad_promedio,fill=Monto_Compra_Promdio)) + geom_col() + theme(axis.title = element_text(size = 25,color="black"),axis.text = element_text(size = 20,color="black"),title = element_text(size = 20,color = "black"),legend.text = element_text(color="black",size = 18)) + ggtitle("Compra Mensual del Producto y Monto Financiero") + xlab("Meses") + ylab("Cantidad Promedio Mensual") + labs(fill="C$ Monto") + geom_text(aes(label=format(Cantidad_promedio,big.mark = ","),vjust="bottom"),size=8) + scale_fill_gradient2(low = "orange",mid = "yellow",high = "red") + scale_y_continuous(labels = scales::comma,breaks = seq(0,14000,4000))
+```
+
+```{r, echo=FALSE, fig.height=8, fig.width=18, message=FALSE, warning=FALSE}
+mercado %>% mutate(year=year(FECHA_PUBLIC_OC),mes=month(FECHA_PUBLIC_OC)) %>% group_by(year,mes) %>% summarise(Cantidad=sum(CANTIDAD),Numero=length(unique(INSTITUCION)),Precio_Promedio=mean(PRECIO_AJUSTADO)) %>% filter(year==2020) %>% mutate(Monto_Compra_Promdio=((Cantidad*Precio_Promedio)/Numero),Cantidad_promedio=round(Cantidad/Numero,0)) %>% unite("year_mes",year,mes,sep="-") %>% mutate(year_mes=ym(year_mes)) %>% ggplot(aes(x=year_mes,y=Cantidad_promedio,fill=Numero)) + geom_col() + theme(axis.title = element_text(size = 25,color="black"),axis.text = element_text(size = 20,color="black"),title = element_text(size = 20,color = "black"),legend.text = element_text(color="black",size = 18)) + ggtitle("Compra Mensual del Producto y Monto Financiero") + xlab("Meses") + ylab("Cantidad Promedio Mensual") + labs(fill="Instituciones") + geom_text(aes(label=format(Cantidad_promedio,big.mark = ","),vjust="bottom"),size=8) + scale_fill_gradient2(low = "orange",mid = "yellow",high = "red",breaks=seq(0,15,2)) + scale_y_continuous(labels = scales::comma,breaks = seq(0,14000,4000))
+```
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+mercado %>% mutate(year=as.factor(year(FECHA_PUBLIC_OC)),mes=month(FECHA_PUBLIC_OC))  %>% group_by(year,mes,INSTITUCION) %>% nest() %>% mutate(N_Orden_Compra=lapply(data,function(x){length(unique(x$NUMERO_OC))}),Monto_Compra_Promedio=lapply(data,function(x){sum(x$CANTIDAD*x$PRECIO_AJUSTADO)}),Cantidad_Promedio=lapply(data,function(x){sum(x$CANTIDAD)})) %>% unnest(cols=c(N_Orden_Compra,Monto_Compra_Promedio,Cantidad_Promedio)) %>% ungroup() %>% group_by(year,mes) %>% summarise(Numero=length(unique(INSTITUCION)),N_Orden_Compra=sum(N_Orden_Compra),Monto_compra_Promedio=sum(Monto_Compra_Promedio),Cantidad_Promedio=sum(Cantidad_Promedio)) %>% mutate(Monto_compra_Promedio=Monto_compra_Promedio/Numero,Cantidad_Promedio=round(Cantidad_Promedio/Numero,0)) %>% filter(year=="2020") %>%knitr::kable(format.args = list(big.mark=","),caption = "Compra en C$ mensual del producto")
+```
+
+En graficos y tabla de datos, se muestra la cantidad promedio mensual del producto que las entidades públicas adquirierón, el monto estimado en compra que representa, el numero de ordenes de compra efectuadas para adquirir el producto en el mes, y el numero de entidades públicas que adquirieron el producto en cada mes. sin incluir la adquisición realizada por el Ministerio de Educación en el mes de agosto 2022, las entidades públicas pueden adquirir el producto en una sola orden de compra con un monto representativo, en sustitución de emsión de varias ordenes de compras. a este respecto es de interes conocerer por que las entidades públicas realizan la adquisición del producto en a traves de la emisión de varias ordenes de compra.
+
+```{r}
+mercado %>% mutate(year=as.character(year(FECHA_PUBLIC_OC))) %>% select(c(INSTITUCION,year,CANTIDAD)) %>% pivot_wider(names_from=year,values_from=CANTIDAD,values_fn=sum,values_fill=0) %>% adorn_totals(where="col") %>% arrange(desc(Total)) %>% tail(10) %>% mutate(Porcentaje=cumsum(round(Total/sum(mercado$CANTIDAD),3))) %>% knitr::kable()
+```
+
+conforme tabla anterior se observa las 10 entidades públicas con el menor número de resmas adquiridas del producto en el periodo de estudio, a este respecto se observa que la ultima entidad pública adquirio una cantidad irrelevante del producto. 
+
+## Identificación Geografica de los Volumenes de Compra.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+i <- mercado %>% group_by(INSTITUCION) %>% summarise(Cantidad=sum(CANTIDAD)) %>% arrange(desc(Cantidad)) %>% head(10) %>% select(INSTITUCION) %>% as_vector("character") 
+
+d1 <- mercado %>% filter(INSTITUCION %in% i) %>% group_by(INSTITUCION,DEPARTAMENTO_PROVEEDOR) %>% summarise(Cantidad=sum(CANTIDAD)) %>% pivot_wider(names_from=DEPARTAMENTO_PROVEEDOR,values_from=Cantidad,values_fill=0) %>% adorn_totals() %>% select(1:9) %>%knitr::kable(caption = "Compras por año y mensual",format.args = list(big.mark=","))
+
+d2 <- mercado %>% filter(INSTITUCION %in% i) %>% group_by(INSTITUCION,DEPARTAMENTO_PROVEEDOR) %>% summarise(Cantidad=sum(CANTIDAD)) %>% pivot_wider(names_from=DEPARTAMENTO_PROVEEDOR,values_from=Cantidad,values_fill=0) %>% adorn_totals() %>% select(1,10:18) %>%knitr::kable(caption = "Compras por año y mensual",format.args = list(big.mark=","))
+
+knitr::kables(list(d1,d2))
+```
+
+La información presentado indica que la mayor compra del producto de papel bond se reailiza en el departamento de managua en el periodo de estudio.
+
+# Concluciones.
+
+* El producto papel Bond cumple con la condición producto-demanda y estructura de mercado por lo que es aplicable a Acuerdo Marco.
+* El prodcuto presenta una relación inversamente proporcional entre las variables precio y cantidades.
+* El segmento de mercado para Acuerdo Marco unicamente se debe realizar en el departamento de managua.
+* No hay riesgo en la distribución del producto si el Acuerdo Marco se realiza unicamente en zona geografica de managua.
+* Las entidades públicas para adquirir el producto en el Acuerdo Marco deben realizar compras consolidadas.
+
+# Acciones a seguir con respecto a los próximos estudios por realizar.
+
+* Proceder con los otros estudios para determinar la viabilidad del producto.
+* Hacer de conocimiento a las Entidades Públicas que deben adquirir el producto en compra unificadas.
+* Realizar reuniones de socialización con las entidades públicas para conocer:
+    + El periodo promedio de pago realizado por las entidades públicas.
+    + Por que adquieren el producto en un gran número de ordenes de compra.
