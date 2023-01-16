@@ -154,7 +154,7 @@ En la Base de datos se presentan `r length(unique(Base_P$DIMENSION_PAPEL))` áre
 
 ```{r Homologacion de Dimension, echo=FALSE, message=FALSE, warning=FALSE}
 options(scipen = 999)
-Base_P <- Base_P %>% mutate(DIMENSION_PAPEL=if_else(str_detect(DIMENSION_PAPEL,"(CARTA)|(11)|(T/C)|(C)"),"CARTA 8.5 X 11",DIMENSION_PAPEL)) %>%
+Base_P <- Base_P %>% mutate(DIMENSION_PAPEL=if_else(str_detect(DIMENSION_PAPEL,"(CARTA)|(X11)|(X 11)|(T/C)|(C)"),"CARTA 8.5 X 11",DIMENSION_PAPEL)) %>%
   mutate(DIMENSION_PAPEL=if_else(str_detect(DIMENSION_PAPEL,"(LEGAL)|(T/L)|(L)|(14)"),"LEGAL 8.5 X 14",DIMENSION_PAPEL)) %>% mutate(DIMENSION_PAPEL=if_else(str_detect(DIMENSION_PAPEL,"34"),"22 X 34",DIMENSION_PAPEL))
 
 P <- Base_P %>% group_by(DIMENSION_PAPEL) %>% summarise(Frecuencia=n(),Monto_Total=sum(PRECIO_UNITARIO*CANTIDAD,na.rm=TRUE)) %>%

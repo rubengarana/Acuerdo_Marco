@@ -137,7 +137,7 @@ library(readxl)
 library(tidyverse)
 library(janitor)
 P <- read_xlsx(path = "C:/Users/rubena/Desktop/Acuerdos Marco/Acuerdo Marco/Base de Datos Para Estudios de Mercado/Papel_bond.xlsx",sheet = 1)
-P <- P %>% filter(DIMENSION_PAPEL %in% c("INDETERMINADO","CARTA 8.5 X 11")) %>% mutate(COSTO_TOTAL=PRECIO_UNITARIO*CANTIDAD) %>% group_by(INSTITUCION) %>% summarise(COSTO_TOTAL=round(sum(COSTO_TOTAL),2)) %>% arrange(desc(COSTO_TOTAL)) %>% head(10) %>% adorn_totals() 
+P <- P %>% filter(DIMENSION_PAPEL %in% c("INDETERMINADO","CARTA 8.5 X 11") & DEPARTAMENTO_PROVEEDOR=="Managua") %>% mutate(COSTO_TOTAL=PRECIO_UNITARIO*CANTIDAD) %>% group_by(INSTITUCION) %>% summarise(COSTO_TOTAL=round(sum(COSTO_TOTAL),2)) %>% arrange(desc(COSTO_TOTAL)) %>% head(10) %>% adorn_totals() 
 
 knitr::kable(P,format.args = list(big.mark=","),caption = "Compra Efectuadas en el periodo de estudio.")
 ```

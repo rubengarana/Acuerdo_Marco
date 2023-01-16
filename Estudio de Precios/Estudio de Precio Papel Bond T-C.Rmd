@@ -1,0 +1,256 @@
+---
+title: "Estudio de Precio Papel Bond T-C"
+author: "Dirección Especifica de Acuerdos Marco"
+date: "`r Sys.Date()`"
+output: 
+  word_document: 
+    fig_caption: yes
+    toc: yes
+---
+
+# Breve memoria tecnica de Elaboración del Estudio.
+
+```{r, message=FALSE, warning=FALSE, include=FALSE}
+library(lubridate)
+library(tidyverse)
+library(readxl)
+library(janitor)
+library(forecast)
+
+Precio <- read_excel("C:/Users/rubena/Desktop/Acuerdos Marco/Acuerdo Marco/Base de Datos Para Estudios de Mercado/Papel_bond.xlsx",sheet = 1)
+Precio <- Precio[(Precio$DEPARTAMENTO_PROVEEDOR=="Managua") & (Precio$DIMENSION_PAPEL %in% c("CARTA 8.5 X 11","INDETERMINADO")),]
+```
+
+
+El presente estudio de precios del papel bond se elaboro con bases de datos proporcinada por el SISCAE y la DGTEC. El producto papel bond unicamente se segmento o dirigio a una especificación técnica o funcional, siendo el área del papel de tamaño carta (8.5" X 11"), de tal forma que el producto contiene una gran gama de precios procedentes de distintas marcas y otras espeficaciones tecnicas o funcionales no detalladas como gramaje y porcentaje de blancura. asi mismo, conforme estructura de mercado se incluyen proveedores naturales y judiricos quienes presentan distintos precios.
+
+El producto papel bond conforme estudio de mercado unicamente esta dirigido al área geografica del departamento de managua, por lo que los precios presentes provienen de proveedores correspondiente al mercado del departamento mencionado. 
+
+Se establece la variable cantidades como una variable cualitiva que clasifica las cantidades en distintos rangos para conocer si existe en el mercado una oferta de menor precio por parte de los proveedores por un mayor numero de compra de resmas de papel por las entidades públicas.
+
+El precio maximo referencial(PMR) se establece mediante los distintos metodos graficos y tabulares, que permiten determinar la mayor proporcion de compra del producto que se ha realizado a un determinado precio como punto maximo, precios mayores a este descartan productos que se vendan a ese nivel de precios.
+
+Por lo tan las variables que se tienen en cuenta para la estimación de un PMR son:
+
+- Proveedores Naturales y Judiricos.
+- Especificación Tecnica.
+- Mayor proporción de los precios en categorias de cantidades.
+
+Se realizán estudios explorativos y descriptivos para comprender la variación del precio.
+
+# Estadistica Descriptiva de Precios.
+
+Se presenta las variables cualitativas cantidad y precio ajustado, donde se aprecia una distribucion de ambas variables desde el valor minimo hasta el maximo.
+
+```{r}
+Precio %>% select(CANTIDAD,PRECIO_AJUSTADO) %>% summary()
+```
+
+La proxima tabla demuestra que en el periodo de estudio el procedimento de contratación más utilizado para adquirie el producto es Contratacion Menor, asi mismo los proveedores juridicos son los mayormente adjuricados. por lo tanto la mayor distribución de precios provienen proveedores juridicos, el que las entidades públicas adquieran el producto mediante contratación menor puede indicar que adquieren poco el producto o ejecutan muchas ordenes de compra del bien en vez de unificarlas. 
+```{r}
+addmargins(table(Precio$TIPO_PROVEEDOR,Precio$TIPO_PROCEDIMIENTO))
+
+```
+
+```{r, message=FALSE, warning=FALSE}
+Precio %>% mutate(year=year(FECHA_PUBLIC_OC)) %>% group_by(year,TIPO_PROCEDIMIENTO) %>% summarise(Proceso=length(unique(No_PROCESO)),N_Orden=length(NUMERO_OC)) %>% knitr::kable()
+```
+
+La tabla presente nos muestra los procesos ejecutados con sus respectivas ordenes de compra, por la tanto en los procedimientos de contratación menor por cada proceso de compra las entidades públicas ejecutan de una orden de compra a más.
+
+## Resumen de Precios por año.
+
+```{r, echo=FALSE, message=TRUE, warning=TRUE}
+by(Precio$PRECIO_AJUSTADO,year(Precio$FECHA_PUBLIC_OC),summary)
+```
+
+
+```{r, fig.height=8, fig.width=18}
+Precio %>% mutate(year=year(FECHA_PUBLIC_OC)) %>% ggplot(aes(x=as.factor(year),y=PRECIO_AJUSTADO,fill=as.factor(year))) + geom_boxplot(outlier.color = "red",notch = TRUE) + geom_jitter(alpha=0.5) + ggtitle("BoxPlot por año") + labs(x="Años",y="Precios Ajustados") + theme(legend.position = "none",axis.title = element_text(color = "black",size = 15),axis.text = element_text(color = "black",size=12)) + coord_cartesian(ylim = c(80,310))
+```
+
+La grafica y el detalle por año, nos presentan la distribución del precio, la media y la mediana en los años 2019 y 2022 son distintas por lo tanto los datos no deben presentar una distribución normal y estas sesgados hacia la derecha por valores de mayor escala.
+
+## Precios por tipo de proveedor.
+
+```{r}
+m <- year(Precio$FECHA_PUBLIC_OC)
+m <- aggregate(round(Precio$PRECIO_AJUSTADO,2),list(Precio$TIPO_PROVEEDOR,m),summary,simplify = TRUE,drop=TRUE)
+colnames(m) <- c("Tipo Proveedor","Año","Precio")
+print(m %>% arrange(desc(`Tipo Proveedor`)))
+remove(m)
+```
+
+```{r, fig.height=8, fig.width=18, message=FALSE, warning=FALSE}
+Precio %>% mutate(`Año`=as.factor(year(FECHA_PUBLIC_OC))) %>% ggplot(aes(x=`Año`,y=PRECIO_AJUSTADO,fill=TIPO_PROVEEDOR)) + geom_boxplot(alpha=0.5) + geom_jitter() + facet_grid(TIPO_PROVEEDOR~.) + theme(legend.position = "none") + labs(title = "Variacion del precio en el tiempo por tipo de proveedor") + xlab("Año") + ylab("Precio Ajustado") + theme(axis.title = element_text(size=20,color="black"),axis.text = element_text(size=18,color="black"),title = element_text(size=25,color="black"),strip.text = element_text(color="black",size=15))
+```
+
+
+```{r, fig.height=8, fig.width=18, message=FALSE, warning=FALSE}
+Precio %>% mutate(`Año`=as.factor(year(FECHA_PUBLIC_OC))) %>% ggplot(aes(x=TIPO_PROVEEDOR,y=PRECIO_AJUSTADO,fill=TIPO_PROVEEDOR)) + geom_boxplot(alpha=0.5) + geom_jitter() + facet_grid(`Año`~.) + theme(legend.position = "none") + labs(title = "Variacion del precio por Tipo de Proveedor en el tiempo") + xlab("Tipo de proveedor") + ylab("Precio Ajustado") + theme(axis.title = element_text(size=20,color="black"),axis.text = element_text(size=18,color="black"),title = element_text(size=25,color="black"),strip.text = element_text(color="black",size=15))
+```
+
+La tabla y los graficos de boxplot nos muestran que independientemente el tipo de proveedor el producto no ha tenido grandes cambios en el precio a lo largo del tiempo, no obstante entre proveedores el que presenta una media y mediana de menor cuantia son los proveedores judiricos, los naturales son los que cobraron los precios más altos, por ende la mediana y media son de mayor valor monetario.
+
+## Precios en el tiempo.
+
+
+```{r, echo=FALSE, fig.height=8, fig.width=18, message=FALSE, warning=FALSE}
+Precio %>% mutate(mes = month(FECHA_PUBLIC_OC,label=TRUE),`Año`=as.factor(year(FECHA_PUBLIC_OC))) %>% ggplot(aes(x=mes,y=PRECIO_AJUSTADO,fill=`Año`)) + geom_boxplot(alpha=0.5) + facet_grid(`Año`~.) + ggtitle("Precios en el tiempo") + xlab("Meses") + ylab("Precios") +theme(legend.position = "none",axis.title = element_text(size=20,color="black"),axis.text = element_text(size=18,color="black"),title = element_text(size=25,color="black"),strip.text = element_text(color="black",size=15)) + coord_cartesian(ylim = c(90,300))
+```
+
+
+```{r, echo=FALSE, fig.height=8, fig.width=18, message=FALSE, warning=FALSE}
+Precio %>% mutate(mes=month(FECHA_PUBLIC_OC),year=year(FECHA_PUBLIC_OC)) %>% group_by(year,mes) %>% summarise(P.Cuartil=quantile(PRECIO_AJUSTADO,probs=0.25),mediana= median(PRECIO_AJUSTADO),C.Cuartil=quantile(PRECIO_AJUSTADO,probs=0.75)) %>% arrange(year,mes) %>% ungroup(year,mes) %>% select(-c(year,mes)) %>% ts(frequency = 12,start=c(2019,8)) %>% autoplot(size=1) +theme(axis.title = element_text(size=20,color="black"),axis.text = element_text(size=18,color="black"),title = element_text(size=25,color="black"),legend.text = element_text(size=16)) + xlab("Año meses") + ylab("Precio Austado") + ggtitle("Linea de tiempo de Precios Ajustados") 
+```
+
+En los graficos de boxplot y de lineas se observa, como el primer cuartil, mediana y cuarto cuartil de los precios del producto no presentan un patron, hay valores atipicos que estan por encima de C$200.00, es dificil conocer si estos valores del producto corresponde a una marca en especifico o a una caracteristica tencnica en especifico que incremente el valor del bien.
+
+## Precios afectado por especificaciones tecnicas.
+
+Debido a que el producto fue determinado con una especificación funcional, por presentar una mayor frecuencia de compra por las entidades públicas (dimension del papel), no se realiza otro tipo de analisis para determinar cuanto es el impacto de cada especificación tecnica sobre los precios del producto. 
+
+# Determinación de precios ajustados.
+
+No aplica.
+
+# Categorización de las cantidades de unidad de medida.
+
+```{r, message=FALSE, warning=FALSE}
+library(Hmisc)
+options(scipen = 999)
+#table(cut2(Precio$CANTIDAD,m=100))
+Precio_Cate <- Precio %>% mutate(Categoria=cut2(CANTIDAD,m=100))
+Precio_Cate %>% group_by(Categoria) %>% summarise(Frecuencia=n(),Precio_Medio=mean(PRECIO_AJUSTADO),Mediana=median(PRECIO_AJUSTADO),Varianza = var(PRECIO_AJUSTADO),`Desviacion Estandar`=sd(PRECIO_AJUSTADO),`Costo Total`=sum(PRECIO_UNITARIO*CANTIDAD)) %>% knitr::kable(format.args = list(big.mark=","))
+
+```
+
+Se puede observar que a mayor numero de resmas de papel bond adquiridas los proveedores ofrecen menor precio del producto, se establecieron tres categorias que permiten observar un precion promedio y mediana menor a la anterior categoria, no obstante se procede a realizar las distintas pruebas estadisticas correspondientes para corraborar si en cada categoria los precios son iguales o distintos estadisticamente.
+
+## Distribución Normal de los datos
+
+```{r, fig.height=8, fig.width=18}
+Precio_Cate %>% ggplot(aes(x=PRECIO_AJUSTADO)) + geom_histogram(aes(y=..density..,fill=..count..))  + facet_grid(.~Categoria) + geom_density(size=1,color="green") + stat_function(fun = dnorm,args=list(mean=mean(Precio_Cate$PRECIO_AJUSTADO),sd=sd(Precio_Cate$PRECIO_AJUSTADO)),color="firebrick",size=1) + theme(axis.title = element_text(size=20,color="black"),axis.text = element_text(size=18,color="black"),title = element_text(size=25,color="black"),legend.text = element_text(size=16),strip.text = element_text(color="black",size=16)) + xlab("Precio Ajustado") + ylab("Dencidad") + ggtitle("Histograma de Categoria de Cantidades") 
+```
+
+```{r, fig.height=8, fig.width=18, message=FALSE, warning=FALSE}
+Precio_Cate %>% ggplot(aes(sample=PRECIO_AJUSTADO)) + geom_qq_line() + geom_qq() + facet_grid(.~Categoria) + theme(axis.title = element_text(size=20,color="black"),axis.text = element_text(size=18,color="black"),title = element_text(size=25,color="black"),legend.text = element_text(size=16),strip.text = element_text(color="black",size=16)) + ggtitle("Graficos de Quantiles") 
+```
+
+```{r, message=FALSE, warning=FALSE}
+library(nortest)
+library(car)
+sapply(split(Precio_Cate$PRECIO_AJUSTADO,Precio_Cate$Categoria),FUN = function(x){lillie.test(x)})
+```
+
+Graficamente los datos en cada categoria de cantidades no estan distribuidos normalmente, estan sesgados a la izquierda conforme histograma. el grafico de quantiles tambien demuestra que los precios no estan alineados a la linea de quantiles. se hizo tambien uso de la prueba de Lillie test, en la que los p values de todas las categorias estan muy por debajo de 0.05. por lo que se descarta realizar una prueba anova para determinar si la media de las categorias son iguales.
+
+
+## Homostocidad de los datos.
+```{r, fig.height=8, fig.width=18, message=FALSE, warning=FALSE}
+Precio_Cate%>%ggplot(aes(x=Categoria,y=PRECIO_AJUSTADO)) + geom_boxplot(aes(fill=Categoria)) + theme(axis.title = element_text(size=20,color="black"),axis.text = element_text(size=18,color="black"),title = element_text(size=25,color="black"),legend.text = element_text(size=16),strip.text = element_text(color="black",size=16)) + ggtitle("Box Plot") + xlab("Categorias de Cantidades") + ylab("Precios Ajustados")
+```
+
+```{r}
+leveneTest(Precio_Cate$PRECIO_AJUSTADO,Precio_Cate$Categoria,center = "median")
+```
+
+Se realiza la prueba grafica y el test de Levene para comprobar si la varianza de los datos en cada categoria son iguales, graficamente ninguna categoria tiene varianza similares, el test de levene con el parametro de mediana como punto medio de los datos indica que falta de homostocidad. debido a que tampoco los datos en cada categoria tienen varianza iguales no se puede hacer uso del metodo no parametrico krukas will, por lo tanto se determinara la media a traves del metodo de permutaciones.
+
+
+## Permutaciones
+
+```{r, message=FALSE, warning=FALSE}
+library(bootES)
+bootES(Precio_Cate,R=9999,data.col = "PRECIO_AJUSTADO",group.col = "Categoria",contrast = c("[  1,   51)","[ 51,  180)"),sim="permutation")
+bootES(Precio_Cate,R=9999,data.col = "PRECIO_AJUSTADO",group.col = "Categoria",contrast = c("[  1,   51)","[180,57896]"),sim="permutation")
+bootES(Precio_Cate,R=9999,data.col = "PRECIO_AJUSTADO",group.col = "Categoria",contrast = c("[ 51,  180)","[180,57896]"),sim="permutation")
+```
+
+Las permutaciones indican que ninguna categoria de las cantidades tienen medias iguales, por lo que se puede concluir que estadisticamente que los proveedores proporcionan un menor precio de venta cuando las entidades públicas compran más resmas de papel.
+
+# Estimacion de un Precio Maximo Referencial(PMR)
+
+Determinadas los rangos de las cantidades en categorias o en variable ordinal, se procede a establecer rango de cantidades para conocer la mayor frecuencia de precios tanto en los proveedores naturales y judiricos.
+
+## Clasificacion de precios en rango o categorización.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(gt)
+T <- ftable(addmargins(table(cut2(Precio$PRECIO_AJUSTADO,m = 40),Precio_Cate$Categoria,Precio_Cate$TIPO_PROVEEDOR,exclude = "ENTIDADPUBLICA"),margin = c(2,3),FUN = list( Suma = sum ,Total = sum),quiet = TRUE),col.vars = c(3,2))
+
+T
+```
+
+La categoriacion de los precios en una tabla de frecuencia presenta en que categoria de cantidades se ubica la mayor frecuencia de los precios tanto en proveedores Juridicos y naturales, en el caso de los proveedores juridicos entre menor sean el numero de cantidades a comprar mayor es el precio ofertado, a medida que las cantidades incrementan los precios tienden a disminuir.
+
+Los proveedores Naturales independientemente de la cantidad de resmas ofertadas presentan precios altos y una frecuencia baja de precios menores. 
+
+## Proporcion de precios en categorizacion de cantidades y categorizacion de precios.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(gt)
+T <- round(prop.table(ftable(addmargins(table(cut2(Precio$PRECIO_AJUSTADO,m = 40),Precio_Cate$Categoria,Precio_Cate$TIPO_PROVEEDOR,exclude = "ENTIDADPUBLICA"),margin = c(2,3),FUN = list( Suma = sum ,Total = sum),quiet = TRUE),col.vars = c(3,2)),margin = 2) * 100,2)
+r <- attr(T,"row.vars")[[1]]
+c1 <- attr(T,"col.vars")[[1]]
+c2 <- attr(T,"col.vars")[[2]]
+Acumulado <- cumsum(T[,ncol(T)])
+T2 <- cbind(T,Acumulado)
+rownames(T2) <- r
+colnames(T2) <- c(rep(c2,times=length(c1)),"Acumulado")
+T
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+T2 <- data.frame(Rango=r,Acumulado)
+T2
+```
+
+La tabla de frecuencias relativas de forma analoga pero porcentualmente muestra donde se ubica la frecuencia de precios en el rango de categoria de las cantidades y por tipo de proveedor, con la finalidad de poder determinar un PMR que incluya tanto a proveedores naturales y judiricos que presentan el producto, se selecciona la categoria de precios donde se acumulan la mayor parte de los precios de proveedores naturales y judiricos siendo el rango de entre C$162 a C$195 con una frecuencia acumaluda de 89.18% de los precios. Lo que representa aproximadamente un 98% de precios de proveedores Juridicos y un 59% de los precios de proveedores naturales. Es de interes idicar que este rango de precios incluyes productos de mayor calidad en cuanto al papel.
+
+## Regresion de Quantiles.
+
+Determinado el rango de precios se procede a calcular una regrecion de quantiles para determinar estimacion de intervalos de confianza del decil 9 de los precios.
+
+```{r, echo=FALSE, fig.height=8, fig.width=18, message=FALSE, warning=FALSE}
+library(MASS)
+library(quantreg)
+Precio_Cate %>% ggplot(aes(x=CANTIDAD,y=PRECIO_AJUSTADO)) + geom_point() + geom_smooth() + coord_cartesian(xlim = c(0,3000))
+```
+
+
+```{r, fig.height=8, fig.width=18}
+par(mfrow=c(1,2))
+boxcox(CANTIDAD~PRECIO_AJUSTADO,lambda = -1:1,data=Precio_Cate,plotit = TRUE)
+boxcox(PRECIO_AJUSTADO~CANTIDAD,lambda = -3:3,data=Precio_Cate,plotit = TRUE)
+par(mfrow=c(1,1))
+```
+
+
+```{r, echo=FALSE, fig.height=8, fig.width=18, message=FALSE, warning=FALSE}
+lcantidad <- boxcox(CANTIDAD~PRECIO_AJUSTADO,lambda = -1:1,data=Precio_Cate,plotit = FALSE)
+lprecio <- boxcox(PRECIO_AJUSTADO~CANTIDAD,lambda = -3:3,data=Precio_Cate,plotit = FALSE)
+lcantidad <- lcantidad$x[which.max(lcantidad$y)]
+lprecio <- lprecio$x[which.max(lprecio$y)]
+Cantidad <- BoxCox(Precio_Cate$CANTIDAD,lambda = lcantidad)
+Precio <- BoxCox(Precio_Cate$PRECIO_AJUSTADO,lambda = lprecio)
+ggplot() + geom_point(aes(x=Cantidad,y=Precio,color=Precio_Cate$TIPO_PROVEEDOR),size=2) + geom_smooth(aes(x=Cantidad,y=Precio,color=Precio_Cate$TIPO_PROVEEDOR),se = FALSE,method = "lm") + theme(axis.title = element_text(size=20,color="black"),axis.text = element_text(size=18,color="black"),title = element_text(size=25,color="black"),legend.text = element_text(size=16),strip.text = element_text(color="black",size=16)) + ggtitle("Transformación lambda de variables") + xlab("Cantidad transformada") + ylab("Precios Ajustados transformado") + labs(color="Tipo Proveedor") + geom_quantile(aes(x=Cantidad,y=Precio),quantiles=0.9,color="firebrick",size=2)
+```
+
+```{r}
+mquanti <- rq(formula = Precio~Cantidad, tau = 0.9)
+summary(mquanti)
+
+```
+```{r,echo=FALSE, fig.height=8, fig.width=18, message=FALSE, warning=FALSE}
+plot(summary(rq(formula = Precio~Cantidad, tau = c(1:9)/10)),parm = "Cantidad")
+```
+
+```{r}
+b <- summary(mquanti)
+knitr::kable(data.frame("Precio Bajo"=InvBoxCox(sum(b$coefficients[,"lower bd"] * c(1,BoxCox(35,lambda = lcantidad))),lambda = lprecio),"Precio Medio"=InvBoxCox(predict(mquanti,newdata = data.frame("Cantidad"=BoxCox(35,lambda = lcantidad))),lambda = lprecio),"Precio Alto"=InvBoxCox(sum(b$coefficients[,"upper bd"] * c(1,BoxCox(35,lambda = lcantidad))),lambda = lprecio)),caption = "Intervalo de Confianza de Precio al Cuantil 90%")
+```
+
+# Conclusiones
+
+# Acciones a Seguir.

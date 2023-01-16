@@ -1,27 +1,128 @@
 ---
 title: "Estudio de Oferta Papel Bond T-C"
 author: "Dirección Especifica de Acuerdos Marco"
-date: "`r sys.Date()`"
+date: "`r Sys.Date()`"
 output: 
   word_document:
     fig_caption: yes
     toc: yes
 ---
 
+```{r, message=FALSE, warning=FALSE, include=FALSE}
+library(tidyverse)
+library(lubridate)
+library(readxl)
+library(janitor)
+
+Oferta <- readxl::read_xlsx("C:/Users/rubena/Desktop/Acuerdos Marco/Acuerdo Marco/Base de Datos Para Estudios de Mercado/Papel_bond.xlsx",sheet = 1)
+Oferta <- Oferta[Oferta$DIMENSION_PAPEL %in% c("CARTA 8.5 X 11","INDETERMINADO") & Oferta$DEPARTAMENTO_PROVEEDOR=="Managua",]
+Prov <- unique(Oferta$PROVEEDOR)
+
+Top_10 <- Oferta %>% mutate(COSTO_TOTAL = PRECIO_AJUSTADO*CANTIDAD) %>% group_by(PROVEEDOR) %>% summarise(COSTO_TOTAL=sum(COSTO_TOTAL)) %>% arrange(desc(COSTO_TOTAL)) %>% head(10) %>% select(PROVEEDOR)
+```
+
+
 # Breve memoria técnica de elaboración del estudio.
+
+Se elaboró el presente estudio considerando los datos extraídos de la base de datos de la orden de compra estructurada de agosto 2019 a diciembre 2020 proporcionada por la DGTEC. Se determinó la oferta con el número de proveedores y la concentración del mercado en el sector público, también la disponibilidad de atención a los requerimientos institucionales y los servicios que proporcionan para la entrega del producto. Los potenciales proveedores se extrajo de la dirección electrónica www.paginasamarillas.com.ni, con los parámetros de búsqueda de librerías y ubicación en el departamento de Managua, resultando un total de 76 proveedores potenciales.
 
 # Tablas de resumen de información.
 
 ## Caracteristicas generales de los proveedores.
 
++:------------------------------------+:-------------------------------------+
+|Listado de proveedores identificados |Actuales proveedores:                 |
+|(nombre del proveedor)               |`r paste(Prov,collapse="--")`         |
++-------------------------------------+--------------------------------------+
+|                                     |Potenciales Proveedores:              |
+|                                     |                                      |
+|                                     |No se conocen proveedores             |
++-------------------------------------+--------------------------------------+
+|Principales proveedores conocidos    |`r paste(Top_10[[1]],collapse="--")`  |
+|                                     |                                      |
+|                                     |                                      |
++-------------------------------------+--------------------------------------+
+|Hay liderezgo tecnologico de parte   |Sí [ X ]\                             |
+|de algún proveedor                   |Cuáles:\                              |
+|                                     |PBS, a través de su línea de producto |
+|                                     |de papel oficina XEROX, proporciona una amplia variedad de papel para oficina con diversas características, desde el porcentaje de reciclaje del papel 30% y 100%, papel oficina Premium, papel revolution y otros.\                |
+|                                     |No [ ]                                |
++-------------------------------------+--------------------------------------+
+
+En el periodo de estudio el mercado del producto papel bond tamaño carta fue atendido por un total de `r length(Prov)` proveedores, los principales proveedores conocidos son los que tienen mayor participación de mercado en el sector público. no se logro encontrar una directorio o base de datos de potenciales proveedores.
+
 ## Participación de mercado público de los principales proveedores.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+options(scipen = 999)
+Conc <- Oferta %>% mutate(Costo_Total=CANTIDAD*PRECIO_AJUSTADO) %>% group_by(PROVEEDOR) %>% summarise(Costo_Total=round(sum(Costo_Total),2)) %>% arrange(desc(Costo_Total)) %>% mutate(part_mercado=round(Costo_Total/sum(Oferta$CANTIDAD*Oferta$PRECIO_AJUSTADO),2),Acum_part=round(cumsum(Costo_Total/sum(Oferta$CANTIDAD*Oferta$PRECIO_AJUSTADO)),2)) 
+
+IH <- Conc %>% select(part_mercado) %>% map(function(x){(x*100)^2}) %>% unlist() %>% sum() %>% floor()
+Conc %>% head(10) %>% knitr::kable(format.args = list(big.mark=",")) 
+options(scipen = 0)
+```
+
+La concentración de mercado entre los primeros cuatro proveedores C4 es de `r Conc[4,]$Acum_part` porciento, el indice de Herfindhal resulta en un valor de `r IH`, valor mayor a 2500 por lo tanto el mercado se encuentra altamente concentrado en unos pocos proveedores.  
+
 
 ## Precios ajustados de los proveedores.
 
-## 
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+Oferta %>% filter(PROVEEDOR %in% head(Conc$PROVEEDOR,10)) %>% group_by(PROVEEDOR) %>% summarise(Minimo=min(PRECIO_AJUSTADO),P_cuartil=quantile(PRECIO_AJUSTADO,c(0.25)),Mediana=median(PRECIO_AJUSTADO),Media=mean(PRECIO_AJUSTADO),C_cuartil=quantile(PRECIO_AJUSTADO,c(0.75)),Maximo=max(PRECIO_AJUSTADO),desviacion_standar=sd(PRECIO_AJUSTADO)) %>% arrange(Minimo) %>% knitr::kable(caption = "Distribución de los precios registrados principales proveedores",digits = 2)
+```
 
-# Análisis de la tabal de resumen de información.
+La tabla presenta precios ajustados al tiempo presente de los principales proveedores que tienen la mayor participación de mercado, se visualiza desde el precio minimo a maximo registrado en cada orden de compra. Es de importancia considerar que la variable cuantitativa precio no se puede analizar como una variable aislada, debido a que su valor depende de la variable cantidades, por el volumen de resmas que adquieren la entidades públicas, tambien por la marca del producto y especificaciones tecnicas o funcionales que contengan el producto causando variaciones en su valor monetario. 
+
+```{r, echo=FALSE}
+Oferta %>% filter(PROVEEDOR %in% head(Conc$PROVEEDOR,10)) %>% group_by(PROVEEDOR) %>% summarise(Cantidad_Minima=min(CANTIDAD),Precio_Minimo=PRECIO_AJUSTADO[which.min(CANTIDAD)],Cantidad_Maxima=max(CANTIDAD),Precio_Maximo=PRECIO_AJUSTADO[which.max(CANTIDAD)]) %>% knitr::kable(caption = "Relacion de precios con volumen de cantidades")
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+Oferta %>% filter(PROVEEDOR %in% head(Conc$PROVEEDOR,10)) %>% group_by(PROVEEDOR) %>% filter(CANTIDAD==min(CANTIDAD) | (CANTIDAD==max(CANTIDAD))) %>% select(PRECIO_AJUSTADO,CANTIDAD,ESPECIFICACION_TECNICA) %>% group_by(PROVEEDOR,CANTIDAD) %>% summarise(Especificacion_T=ESPECIFICACION_TECNICA[which.min(PRECIO_AJUSTADO)]) %>% select(!CANTIDAD) %>% mutate(PRECIO=rep(c("Minimo","Maximo"),times=n()/2)) %>% pivot_wider(names_from=PRECIO,values_from=Especificacion_T) %>% knitr::kable(caption = "Exploracion de Especificaciones Tecnincas")
+```
+se realiza un analisis exploratorio para determinar relacion entre el precio, cantidades y especificaciones tecnicas. en las dos tablas indicadas no tiene vinculacion con la tabla de distribucion de precios de los proveedores, que unicamente considera la variable precio. en las tablas se puede observar registros de ordenes de compra efectuadas a los proveedores por la menor y maxima cantidad, asi como los precios de compra por cada pedido, de los cuales se observa en unos proveedores precios mayores cuando facturaron menos a cuando facturaron más y viceversa. para conocer si esta variacion es por otra especificacion tecnica distinta al tamaño carta, se desarrolla tabla que expresa especificacion tecnica solicitada por las entidades públicas en las cantidades y precios indicados. otras caracteristicas tecnicas que se observan son el gramaje de la hoja de papel y el porcentaje de blancura, no obstante la parte contraria de comparacion no indica si mantiene el mismo valor de blancura o gramaje. por lo tanto, es dificil determinar si se debe a la marca del producto o a una espeficicacion tecnica en particular la variacion del precio.
+
+
+## Resumen de información
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+Proveedor <- Top_10$PROVEEDOR
+Cobertura_Geofrafica <- c("","managua y cabecera departamentales","managua y cabecera departamentales","managua y cabecera departamentales","","","","","managua","")
+Tipo_de_proveedor <- c("","productor y distribuidor","distribuidor","distribuidor","","","","","distribuidor","")
+Servicios_Adicionales <- c("","Proporciona servicios de logística, transporta el producto hasta la bodega o lugar indicado por el comprador","Proporciona servicios de logística, transporta el producto hasta la bodega o lugar indicado por el comprador","Proporciona servicios de logística, transporta el producto hasta la bodega o lugar indicado por el comprador","","","","","Proporciona servicios de logística, transporta el producto hasta la bodega o lugar indicado por el comprador","")
+Disponibilidad <- c("","","","","","","","","","")
+Participacion_M <- head(Conc$part_mercado,10)
+Precio_Promedio <- Oferta %>% mutate(Costo_Total=CANTIDAD*PRECIO_AJUSTADO) %>% group_by(PROVEEDOR) %>% summarise(Costo_Total=round(sum(Costo_Total),2),Promedio=mean(PRECIO_AJUSTADO)) %>% arrange(desc(Costo_Total)) %>% head(10) %>% select(Promedio) %>% deframe()
+N_Ordenes_Compra <- Oferta %>% mutate(Costo_Total=CANTIDAD*PRECIO_AJUSTADO,year=as.character(year(FECHA_PUBLIC_OC))) %>% group_by(PROVEEDOR,year) %>% summarise(Costo_Total=sum(Costo_Total),N_OC=length(unique(NUMERO_OC))) %>% group_by(PROVEEDOR) %>% summarise(Costo_Total=sum(Costo_Total),N_OC=sum(N_OC)) %>% arrange(desc(Costo_Total)) %>% head(10) %>% select(N_OC) %>% deframe()
+N_Procesos <- Oferta %>% mutate(Costo_Total=CANTIDAD*PRECIO_AJUSTADO,year=as.character(year(FECHA_PUBLIC_OC))) %>% group_by(PROVEEDOR,year) %>% summarise(Costo_Total=sum(Costo_Total),N_Proceso=length(unique(No_PROCESO))) %>% group_by(PROVEEDOR) %>% summarise(Costo_Total=sum(Costo_Total),N_Proceso=sum(N_Proceso)) %>% arrange(desc(Costo_Total)) %>% head(10) %>% select(N_Proceso) %>% deframe()
+
+d1 <- data.frame(Proveedor,Cobertura_Geofrafica,Tipo_de_proveedor,Servicios_Adicionales) %>% knitr::kable()
+d2 <- data.frame(Proveedor,Disponibilidad,Participacion_M,Precio_Promedio,N_Ordenes_Compra,N_Procesos) %>% knitr::kable()
+
+knitr::kables(list(d1,d2),caption = "Resumen detallado de cada proveedor")
+```
+
+
+# Análisis de la tabla de resumen de información.
+
+La tabla de resumen de informacion permite observar que en el periodo de estudio, el proveedor Empresa Nicaraguense de Importaciones y Exportaciones presento la mayor participacion de mercado conformado unicamente por 2 ordenes de compra ejectuados en 2 procesos, el resto de proveedores tienen de nueve a más ordenes de compra, esto indica que no necesariamente el proveedor mantiene la mayor participacion de mercado o dominio, debido a que cualquier otro proveedor pudo haber sido ajdudicado. los precios promedios de los proveedores varian en dependencia del proveedor, la base de datos con la informacion disponible no permite determinar si la diferencia entre precios se deba a que los productos tienen una especificacion tecnica en particular que incremente el valor del bien o se deba a una marca en particular. 
+
+Unicamente se logro conseguir información de cuatro proveedes de las variabels tipo de proveedor, cobertura geografica, y servicios adicionales. el proveedor PBS es el unico productor, el resto de proveedores son distribuidores. por lo tanto, PBS no depende de acreedores para distribuir sus productos en el territorio naciones, tambien es suplidor del resto de proveedores. en cuanto a su cobertura geografica todos distribuyen en la cabecera departamental de managua en el que proporcionan servicio de logistica.
 
 # Concluciones.
 
+* Los proveedores presentados son aptos para realizar un Acuerdo Marco enfocado en el Departamento de Managua, por su disponibilidad, precio de venta del producto, ser distribuidores y tener la mayor participación de mercado.
+* Condiciones para Acuerdo Marco:
+    + Periodos de Entrega:
+      * Managua el mismo día siempre que se solicitado en la mañana, excepto GONZALEZ PEREIRA SOCIEDAD ANONIMA 72 horas después de la orden de compra.
+     
+      * En las cabeceras departamentales PRODUCTIVE BUSINESS SOLUTIONS NICARAGUA, S.A, LIBRERIA Y DISTRIBUIDORA JARDIN, S.A y GONZALEZ PEREIRA SOCIEDAD ANONIMA hacen entrega del producto en un día programado de la semana sin costo de envió siempre que se compre la cantidad monetaria mínima requerida.
+    + Criterios de calificación:
+      * Verificar formularios de oferta precontractual estén presentes y debidamente llenados y presenciar documentos de respaldo requerido por los formularios.
+      * En el formulario de certificado de experiencia indique la cantidad máxima de ventas realizada en un o la capacidad física mensual para distribuir del producto en consideración
+
 # Acciones a seguir.
+
+* Realizar reunión técnica de socialización con los proveedores para determinar cuáles son los días estipulados para la entrega de los productos en las cabeceras departamentales.
+* Realizar una encuesta aleatoria sistimatizada a proveedres naturales y judiricos para estimar Indices de activos circulaten y endeudamiento del sector economico en que estan los proveedores.
+* Incluir en la encuesta preguntas relacionadas al periodo de pago que estan dispuestos a proporcionar para que las entidades públicas realicen el pago una vez recibidos los productos conforme orden de compra facturada en el CEAM.
